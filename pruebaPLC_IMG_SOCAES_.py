@@ -4,7 +4,7 @@
 """ -------------------------------------------------------------------------------------------------------------------------------------
     ------------------------------------------------ Grupo de investigación GEPAR -------------------------------------------------------
     -------------------------------------------------- Universidad de Antioquia ---------------------------------------------------------
-    -------------- Autores: Sebastián Guzmán - Santiago Ruiz González y Maycol Zuluaga Montoya (Interfaz gráfica y documentación) -------
+    -------------- Autores: Luis Fernando Torres - Sebastián Guzmán - Santiago Ruiz González y Maycol Zuluaga Montoya (Interfaz gráfica y documentación) -------
     -------------------------------------------------------------------------------------------------------------------------------------
     --------------- Project Name: Clasificación de esquejes mediante técnicas de visión artificial --------------------------------------
     -------------------------------------------------------------------------------------------------------------------------------------
@@ -677,7 +677,12 @@ def conectar_PLC():
     
    
 def agregar_esqueje():
-
+    """
+    Función que permite agregar una nueva variedad de esqueje desde un boton
+    Se introduce el nombre de la variedad, el tamaño en cm del esqueje corto, largo,  y hoja en base 
+    y se almacena los datos en un archivo formato json
+    """
+    
     input_window = tk.Toplevel(MainWindow)
     input_window.title('Agregar nueva variedad de un esqueje')
     input_window.configure(bg="#314354", highlightbackground='#343A40')
@@ -758,7 +763,73 @@ def get_params_by_name(name):
             return largo, corto, hoja_base
     # If the name is not found in the values list, return empty strings for the parameters
     return '', '', ''
+ 
+
+def abrir_ventana_info():
+    """
+    Función en la cual se muestra cual es el objetivo principal del proyecto quienes son los involucrados y los respectivos logos
+    """
+    # Definir las variables de imagen como globales
+    global imagen1_tk, imagen2_tk, imagen3_tk, imagen4_tk
     
+    # Crear una nueva ventana
+    nueva_ventana = tk.Toplevel(MainWindow)
+    
+    nueva_ventana.configure()
+
+    # Configurar el tamaño de la ventana
+    nueva_ventana.geometry("1000x500")
+
+    # Configurar el título de la ventana
+    nueva_ventana.title("ALSOFT - Acerca del Software")
+
+     # Agregar etiquetas con el texto
+    texto1 = "Este software utiliza técnicas de visión artificial y PLC para automatizar la selección de distintos tipos de esquejes. Se trata de una herramienta tecnológica diseñada para optimizar y agilizar los procesos de selección, garantizando una mayor eficiencia y precisión en los resultados."
+    etiqueta_texto1 = tk.Label(nueva_ventana, text=texto1, wraplength=500,fg = '#AAAABA',font = ("calibri", 14, "bold"), justify="center")
+    etiqueta_texto1.pack()
+
+    texto2 = "El software ha sido desarrollado con la finalidad de clasificar los esquejes de acuerdo a las medidas suministradas por la empresa ASOCOLFLORES. Gracias a la información, los esquejes pueden ser clasificados en cuatro categorías: corto, largo, hoja en base o ideal."
+    etiqueta_texto2 = tk.Label(nueva_ventana, text=texto2, wraplength=500,fg = '#AAAABA',font = ("calibri", 14, "bold"), justify="center")
+    etiqueta_texto2.pack()
+
+    texto3 = "El proyecto ALIES fue desarrollado en colaboración con la Universidad de Antioquia, el Grupo GEPAR UdeA y el Grupo de Diseño Mecánico"
+    etiqueta_texto3 = tk.Label(nueva_ventana, text=texto3, wraplength=600,fg = '#AAAABA',font = ("calibri", 14, "bold"), justify="center")
+    etiqueta_texto3.pack()
+    
+    # Cargar las imágenes
+    imagen1 = Image.open("gepar.png")
+    imagen2 = Image.open("udea.png")
+    imagen3 = Image.open("asocol.png")
+    imagen4 = Image.open("GDM.jpeg")
+
+    #Crear un objeto Canvas en la ventana
+    canvas = tk.Canvas(nueva_ventana, width=800, height=600)
+    canvas.pack()
+    
+    #Redimensionar las imágenes
+    print("Redimensionando imágenes...")
+    imagen1 = imagen1.resize((100, 100))
+    imagen2 = imagen2.resize((100, 100))
+    imagen3 = imagen3.resize((250, 100))
+    imagen4 = imagen4.resize((200, 100))
+
+    # Convertir las imágenes a formato compatible con TKinter
+    print("Convirtiendo imágenes...")
+    imagen1_tk = ImageTk.PhotoImage(imagen1)
+    imagen2_tk = ImageTk.PhotoImage(imagen2)
+    imagen3_tk = ImageTk.PhotoImage(imagen3)
+    imagen4_tk = ImageTk.PhotoImage(imagen4)
+
+    
+    # Agregar las imágenes al Canvas
+    print("Agregando imágenes al Canvas...")
+    canvas.create_image(100, 100, image=imagen1_tk)
+    canvas.create_image(250, 100, image=imagen2_tk)
+    canvas.create_image(450, 100, image=imagen3_tk)
+    canvas.create_image(700, 100, image=imagen4_tk)
+
+    # Mostrar el Canvas en la ventana
+    canvas.pack() 
 """ ----------------------------------------------------------------------------------------------------------------------------------------
     ------------------------------------------------- 3. Definición de la ventana principal ------------------------------------------------
     ---------------------------------------------------------------------------------------------------------------------------------------- """
@@ -866,27 +937,28 @@ combox = tk.ttk.Combobox(MainWindow,font = "ArialBlack 12 bold", width = 12, hei
 combox.current(0)
 combox.place(x = 935,y = 608)
 
-# Create a Combobox widget
-#esquejes = tk.ttk.Combobox(frame, values=[value['name'] for value in values])
-
 # Se crea un boton  para añadir una nueva variedad de esqueje
 add_button = tk.Button(MainWindow, text='Agregar', width = 7, height = 1, command= agregar_esqueje, fg = '#FFFFFF', bg = '#276CDE', overrelief = "sunken")
 add_button.place(x=1067, y=608)
 
+# Crear un botón en la ventana principal para acerca de 
+about_boton = tk.Button(MainWindow, text="Acerca de",command=abrir_ventana_info)
+# Mostrar el botón en la ventana principal
+about_boton.place(x=1155,y=600)
 
 
 #Imagen GEPAR
-gepar = ImageTk.PhotoImage(file="gepar.png")
-label_gepar = tk.Label(image=gepar)
-label_gepar.place(x = 1155,y = 600)
+#gepar = ImageTk.PhotoImage(file="gepar.png")
+#label_gepar = tk.Label(image=gepar)
+#label_gepar.place(x = 1155,y = 600)
 
 #Imagen UDEA
-udea = ImageTk.PhotoImage(file="udea.png")
-label_udea = tk.Label(image=udea)
-label_udea.place(x = 1240,y = 600)
+#udea = ImageTk.PhotoImage(file="udea.png")
+#label_udea = tk.Label(image=udea)
+#label_udea.place(x = 1240,y = 600)
 
 #icono GEPAR
-icono = MainWindow.iconbitmap("gepar.ico")
+#icono = MainWindow.iconbitmap("gepar.ico")
 
 MainWindow.bind("<Key>",key_pressed)
 
