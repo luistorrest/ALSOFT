@@ -4,7 +4,7 @@
 """ -------------------------------------------------------------------------------------------------------------------------------------
     ------------------------------------------------ Grupo de investigación GEPAR -------------------------------------------------------
     -------------------------------------------------- Universidad de Antioquia ---------------------------------------------------------
-    -------------- Autores: Luis Fernando Torres (Interfaz gráfica y documentación) -------
+    -------------- Autores: Luis Fernando Torres - Sebastián Guzmán - Santiago Ruiz González y Maycol Zuluaga Montoya (Interfaz gráfica y documentación) -------
     -------------------------------------------------------------------------------------------------------------------------------------
     --------------- Project Name: Clasificación de esquejes mediante técnicas de visión artificial --------------------------------------
     -------------------------------------------------------------------------------------------------------------------------------------
@@ -31,12 +31,14 @@ from PIL import Image, ImageTk                                      # Librerí­
 #from tkMessageBox import showerror,askquestion,showinfo             # Librerí­a para generar ventanas emergentes 
 from tkinter import filedialog                                      # Libreria para corregir tkfiledialog
 from tkinter import messagebox
+
+import snap7                                                        # Librería para Comunicación con el PLC
 import time                                                         # Libreria para inicializar timers para espera
 import os           
 import tkinter.simpledialog as sd                                   #Librería para mostrar dialogos 
 import json                                                         # Librería para crear el archivo donde se va a guardar los tipos de estquejes                           
 
-import socket                                                       # Librería para comunicación con PLC
+
 """ ----------------------------------------------------------------------------------------------------------------------------------------
     -------------------------------------------------- 2. Implementación de funciones ------------------------------------------------------
     ---------------------------------------------------------------------------------------------------------------------------------------- """
@@ -140,14 +142,10 @@ def iniciar():
 
     """---------------------------------- b.5. Validación al modo de lectura ----------------------------------------------------------------------"""
     # Acorde al estado del radiobutton se  ejecuta la función asociado a lectura desde directorio o desde la cámara
-   
-    
-   
     if (state_radiobutton.get() == 1):
         ejecucion_directorio()                                      # Se ejecuta la función asociada a la lectura de las imágenes desde un directorio            
         
     elif (state_radiobutton.get() == 2):                            # Se ejecuta la función asociada a la lectura de las imágenes desde la cámara
-        conectar_PLC()
         ejecucion_camera()  
     else:                                                           # Si no se detecta el modo de lectura aparece este error
         messagebox.showerror("Mensaje de error","No se ha detectado el modo de lectura, por favor elí­jalo.")                                            
@@ -485,7 +483,6 @@ def ejecucion_camera():
     global procesar_imagen
     global cont
     global plc
-    global clase_codificada 
                                                          
     classification='0'                                  # Se inicializa la calsificación en '0'
     vector_banda=list('000000000000')                   # Se inicializa todas las posiciones en 0 (Sin calsificación)                   
@@ -524,7 +521,7 @@ def ejecucion_camera():
 
             if (procesar_imagen==True):  # Esta linea es la que reemplaza el infrarojo, si se cumple la condicion de entrada por teclado procede a proceaar el frame obtenido.                       
                 """----------------------------------------- a.2. Obtención de las rutas de las imágenes ------------------------------------------------"""
-                ruta_lectura = "C:/UdeA/Investigacion/GEPAR/MSE/Base_de_datos/Cortos"                       # Se abre el explorador de archivos para buscar el directorio en el ordenador y se captura dicha ruta
+                ruta_lectura = "C:/Users/Luis_Fernando/Documents/UdeA/Investigacion/GEPAR/MSE/Base_de_datos/Ideales"                       # Se abre el explorador de archivos para buscar el directorio en el ordenador y se captura dicha ruta
                 rutas_esquejes = glob.glob(ruta_lectura + "/*.TIFF")      # Se genera la lista con todas las rutas de las imagenes .TIFF del directorio seleccionado
                   
                 #print("Si esta leyendo")
@@ -541,30 +538,105 @@ def ejecucion_camera():
 
                 """-----------   j.4.2.2. Envió de señales para encender LED ------------------------------------------------------""" 
                 
-                if(clase=="Vacio"): 
-                    clase_codificada = 0
- 
-                        
-                elif(clase=="Largo"):                   # Si el esqueje es largo, se envia la señal para disparar el segundo actuador    
-                    clase_codificada = 1
-
+                # if(clase=="Vacio"):     
+                    
+                #     # Cuando es  b'\x00\x00' es para Ideal
+                #     # Si el esqueje es corto, se envia la señal para disparar el primer actuador
+                #     #Envio del true o false al pulsador
+                #     pulsador = b'\x00' # Se apaga el pulsador (se mantiene abierto)
+                #     esqueje_codificado_PLC = b'\x00\x00'
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador)  
+                       
+                #     #Envio de dato tipo de esqueje'
+                #     esqueje_en_PLC = plc.db_write(1, 2, esqueje_codificado_PLC )
+    
+                #     #Envio del true o false al pulsador
+                #     pulsador = b'\x01'  # Se enciende el pulsador (se mantiene cerrado)
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador)
+                #     time.sleep(0.4) #tiempo en el que se mantiene cerrado el pulsador
+    
+                #     pulsador = b'\x00' # Se cierra el pulsador de nuevo
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador) 
+                    
             
-                elif(clase=="Hoja en base"):            # Si el esqueje tiene hoja en base, se envia la señal para disparar el tercer actuador
-                    clase_codificada = 2
-
+                # elif(clase=="Largo"):                   # Si el esqueje es largo, se envia la señal para disparar el segundo actuador    
+                #     # Cuando es  b'\x00\x01' es Largo
+                #     # Si el esqueje es corto, se envia la señal para disparar el primer actuador
+                #     #Envio del true o false al pulsador
+                #     pulsador = b'\x00' # Se apaga el pulsador (se mantiene abierto)
+                #     esqueje_codificado_PLC = b'\x00\x01'
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador)  
+                       
+                #     #Envio de dato tipo de esqueje'
+                #     esqueje_en_PLC = plc.db_write(1, 2, esqueje_codificado_PLC )
+    
+                #     #Envio del true o false al pulsador
+                #     pulsador = b'\x01'  # Se enciende el pulsador (se mantiene cerrado)
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador)
+                #     time.sleep(0.4) #tiempo en el que se mantiene cerrado el pulsador
+    
+                #     pulsador = b'\x00' # Se cierra el pulsador de nuevo
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador) 
+            
+                # elif(clase=="Hoja en base"):                   # Si el esqueje tiene hoja en base, se envia la señal para disparar el tercer actuador
+                #     # Cuando es  b'\x00\x02' es Hoja en base
+                #     # Si el esqueje es corto, se envia la señal para disparar el primer actuador
+                #     #Envio del true o false al pulsador
+                #     pulsador = b'\x00' # Se apaga el pulsador (se mantiene abierto)
+                #     esqueje_codificado_PLC = b'\x00\x02'
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador)  
+                       
+                #     #Envio de dato tipo de esqueje'
+                #     esqueje_en_PLC = plc.db_write(1, 2, esqueje_codificado_PLC )
+    
+                #     #Envio del true o false al pulsador
+                #     pulsador = b'\x01'  # Se enciende el pulsador (se mantiene cerrado)
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador)
+                #     time.sleep(0.4) #tiempo en el que se mantiene cerrado el pulsador
+    
+                #     pulsador = b'\x00' # Se cierra el pulsador de nuevo
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador) 
                     
-                elif(clase=="Corto"):                   # Si el esqueje es largo, se envia la señal para disparar el segundo actuador    
-                    clase_codificada = 3
-
+                # elif(clase=="Corto"):                   # Si el esqueje es largo, se envia la señal para disparar el segundo actuador    
+                #     # Cuando es  b'\x00\x03' es Corto
+                #     # Si el esqueje es corto, se envia la señal para disparar el primer actuador
+                #     #Envio del true o false al pulsador
+                #     pulsador = b'\x00' # Se apaga el pulsador (se mantiene abierto)
+                #     esqueje_codificado_PLC = b'\x00\x03'
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador)  
+                       
+                #     #Envio de dato tipo de esqueje'
+                #     esqueje_en_PLC = plc.db_write(1, 2, esqueje_codificado_PLC )
+    
+                #     #Envio del true o false al pulsador
+                #     pulsador = b'\x01'  # Se enciende el pulsador (se mantiene cerrado)
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador)
+                #     time.sleep(0.4) #tiempo en el que se mantiene cerrado el pulsador
+    
+                #     pulsador = b'\x00' # Se cierra el pulsador de nuevo
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador) 
                     
-                elif(clase=="Ideal"):                   # Si el esqueje es ideal.
-                    clase_codificada = 4
+                    
+                # elif(clase=="Ideal"):                   # Si el esqueje es ideal.
+                #     # Cuando es  b'\x00/x04 es para Ideal
+                #     # Si el esqueje es corto, se envia la señal para disparar el primer actuador
+                #     #Envio del true o false al pulsador
+                #     pulsador = b'\x00' # Se apaga el pulsador (se mantiene abierto)
+                #     esqueje_codificado_PLC = b'\x00\x04'
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador)  
+                       
+                #     #Envio de dato tipo de esqueje'
+                #     esqueje_en_PLC = plc.db_write(1, 2, esqueje_codificado_PLC )
+    
+                #     #Envio del true o false al pulsador
+                #     pulsador = b'\x01'  # Se enciende el pulsador (se mantiene cerrado)
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador)
+                #     time.sleep(0.4) #tiempo en el que se mantiene cerrado el pulsador
+    
+                #     pulsador = b'\x00' # Se cierra el pulsador de nuevo
+                #     esqueje_en_PLC = plc.db_write(1, 0, pulsador) 
 
-                
-                else:                                   # Si retorna más de un esqueje
-                    clase_codificada = 5
-                              
-                
+#                
                 cantidad_esquejes = cantidad_esquejes + 1     # Se aumenta en uno el contador de las imagenes procesadas                
                 num_esqueje_analizado = cont    
                 actualizar_interfaz(image,esqueje_rotado)     # Se invoca la función para actualziar la interfaz
@@ -576,7 +648,6 @@ def ejecucion_camera():
 def key_pressed(event):    
     global procesar_imagen     
     global cont
-
     
     if(event.char=='a'):#si se cumple la condicion se procede a procesar la siguiente imagen
         procesar_imagen=True                
@@ -584,148 +655,26 @@ def key_pressed(event):
         cont+=1 
         
 def conectar_PLC():
-    """
-    Funcion para verificar conexion con el plc para establecer comunicación utilizando la IP del PLC y el puerto de comunicación
-    """
-    global plc                                #Variable global para comunicar el PLC 
-    global procesar_imagen                    #Variable para saber si la imagen ya esta disponible para procesar la imagen
-    global flag_break                         # Bandera que cuando vale 1 indica que se debe detener el procesamiento de las imágenes  
     
-    host= "192.168.1.5"                       # IP del PLC
-    port = 502                                # Puerto de conexion del PLC 
-    
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as plc:
-            plc.settimeout(5)                   # Establecer un tiempo de espera para la conexión
-            plc.connect((host, port))           #Conectar el PLC a la IP y puerto asignado
-            messagebox.showinfo("Conexión establecida","Se ha establecido la conexion con el PLC, puede continuar con la ejecución del programa")
-            repeat_event()
-            #ejecucion_camera()
-            
-    except ConnectionRefusedError:  
-        messagebox.showerror("ERROR","No se pudo conectar al PLC. Verifica la dirección y el puerto.")
-        
-    except socket.timeout:
-        messagebox.showerror("ERROR","Tiempo de espera agotado. No se pudo conectar al PLC.")
-        
-    except Exception as e:
-        messagebox.showerror("ERROR",f"Error al conectar al PLC: {e}")
-        
-def repeat_event():
-    """
-    Con esta función se realiza una lectura periodica del PLC cada 20 mili-segundos para verificar
-    el estado de la máquina y las peticiones que se tienen según los eventos transcurridos en el tiempo
-    """
-    leer_PLC()
-    MainWindow.after(20, repeat_event)  # La funcion que se repite cada 20ms
-
-def escribir_PLC(contador,clase_codificada,velocidad,boton_start_stop):
-    """
-    Función para escribir los datos en el PLC y llevar control de la máquina en sincronia con los datot 
-    obtenidos por el software los datos que se envían son:
-    
-        1 clasificación del esqueje
-        2 Velocidad del variador
-        3. Estado del boton de mover la banda
-        4. Verificación de conexion 
-    """
     global plc
     
-    boton_start_stop= not (boton_start_stop)
-    
-    with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as plc:
-        plc.connect(("192.168.1.5",502))
+    IP = "192.168.0.1"  #Dirección ip del PLC
+    RACK = 0   #Configuracion del Tia portal
+    SLOT = 1   # Slot en el que esta el PLC en Tia portal
 
-        # trama = "\x00\x00\x00\x00\x00\x06\x01\x03\x10\x00\x00\x01"
-        #for contador in range (0,5):
-        frame = bytearray()
-        frame.append(0x01) #identificador de mensaje
-        frame.append(0x00)
-        frame.append(0x00)
-        frame.append(0x00)
-        frame.append(0x00)
-        frame.append(0x11)
-        frame.append(0x01) # Byte para identificar que es esclavo
-        frame.append(0x10) # codigo Modbus para escritura al PLC, es decir escribir a los registros.
-        frame.append(0x10) # Dirección alta (para escritura)
-        frame.append(0x0A) # Dirección baja (para escritura)
-        frame.append(0x00) # Numero de palabras parte alta
-        frame.append(0x05) # Numero de palabras parte baja
-        frame.append(0x0A) # Bytes a enviar
-        frame.append(0x00) # contador a enviar parte alta
-        frame.append(contador) # contador a enviar parte baja que es el contador D10 (Aqui va el dato recibido en el contador del otro codigo) -> pasar derecho el contador de lectiura
-        frame.append(0x00) # Clasificacion alta
-        frame.append(clase_codificada) # Clasificacion baja (Clasificacion codificada , despues del procesamiento de imagenes)   -> Claisifacion variable global
-        frame.append(0x00) # velocidad alta del variador 
-        frame.append(0x00) # Velocidad baja del variador   -< VEl variador
-        frame.append(0x00) # Botón Start parte alta
-        frame.append(not(boton_start_stop)) # Botón Start parte baja  ->flag_break negado
-        frame.append(0x00) # Palabra verificacion de conexion parte alta siempre en 0
-        frame.append(0x01) # Palabra verificacion de conexion parte baja siempre en 1
+    # Crear un objeto tipo cliente para establecer conecxión entre python
+    # Y Tia portal con el PLC
+    plc = snap7.client.Client()
+    plc.connect(IP, RACK, SLOT)
 
-            
-        plc.sendall(frame)       
-        data = plc.recv(1024)
-        print("Escrito", repr(data))
-        
-        plc.close()
 
-def leer_PLC():
-
-    """
-    Esta es la función que permite ralizar la lectura del estado de la máquina por medio del PLC utilzando protocolo MODBUS
-    En esta funcion se obtiene información:
-        1 Leer imagen: una bandera que indica si ha pasado un eslabon para capturar una imagen a procesar
-        2 contador: que permite llevar sincronización entre el software y hardware
-        3 corriente del variador: Permite controlar la velocidad y evitar daños de la banda transportadora
-        4 Estado del variador: si se enciende o se apaga el movimiento de la banda, pulsando un botón físico
-    
-    """
-     
-    global procesar_imagen     
-    global cont
-    global plc
-    global flag_break                                               # Bandera que cuando vale 1 indica que se debe detener el procesamiento de las imágenes     
-    global clase_codificada
-       
-    # trama = "\x00\x00\x00\x00\x00\x06\x01\x03\x10\x00\x00\x01"
-    with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as plc:
-        plc.connect(("192.168.1.5",502))
-        
-        #Protocolo MODBUS para lectura 
-        frame = bytearray()
-        frame.append(0x01) #identificador de mensaje
-        frame.append(0x00) 
-        frame.append(0x00)
-        frame.append(0x00)
-        frame.append(0x00)
-        frame.append(0x06) # Numero de bytes que siguen
-        frame.append(0x01) # Byte para identificar que es esclavo
-        frame.append(0x03) # codigo Modbus para escritura
-        frame.append(0x10) # Dirección alta (para escritura)
-        frame.append(0x00) # Dirección baja (para escritura)
-        frame.append(0x00) # numero de memoria parte alta
-        frame.append(0x04) # numero de memoria parte baja
-        
-        
-        plc.sendall(frame) #Solicutd al PLC      
-        data = plc.recv(1024) # Guardar datos devueltos por el PLC en el arreglo data
-        print("Recibido", repr(data))
-        
-    if(data[10]==1): 
-        #si paso un eslavon la cámara ya tomo foto  y se procede a procesar la siguiente imagen
-        procesar_imagen=True                
-        ejecucion_camera()
-        escribir_PLC(data[12],clase_codificada,1,flag_break) 
-        cont+=1 
-        plc.close() 
-        
+    #Verificación de conexión
+    if(plc.get_connected()):
+        messagebox.showinfo("Conexión establecida","Se ha establecido la conexion con el PLC, puede continuar con la ejecución del programa")
     else:
-        # coloco contador y clasificacion en cero para enviar al plc 
-        escribir_PLC(0,0,1,flag_break) 
-        plc.close() 
+        messagebox.showinfo("Error de conexion","Hubo un error en la conexión, intentelo de nuevo")
     
-
+    
    
 def agregar_esqueje():
     """
@@ -800,7 +749,7 @@ def agregar_esqueje():
     
 def get_selected_value():
     # Get the currently selected value from the Combobox
-    name = combox.get()
+    name = Com.get()
     # Find the dictionary for the selected value
     selected_value = next((value for value in values if value['name'] == name), None)
     return selected_value
