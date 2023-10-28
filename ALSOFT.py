@@ -188,27 +188,27 @@ def actualizar_interfaz(original_image,processed_image):
     """--------------------------------- d.2. Se muestran las imagenes en la interfaz -------------------------------------------------------------"""
     # Se coloca la imagen original en una label y se modifica la posición y el tamaíño.
     imagen_original = original_image 
-    imagen_original = cv2.resize(imagen_original, (610,530))                            
+    imagen_original = cv2.resize(imagen_original, (560,490))                            
     imagenCV2 = cv2.cvtColor(imagen_original, cv2.COLOR_BGR2RGBA)
     imagen_original = imagenCV2
     imagen_original = Image.fromarray(imagen_original)                                  
     imgtk = ImageTk.PhotoImage(image=imagen_original)                                  
      
-    label_imag_ORIGINAL = tk.Label(MainWindow, image=imgtk,width = 597, height = 527 )
+    label_imag_ORIGINAL = tk.Label(MainWindow, image=imgtk,width = 550, height = 480 )
     label_imag_ORIGINAL.place(x=45,y=42)
     label_imag_ORIGINAL.imgtk = imgtk
     label_imag_ORIGINAL.configure(image=imgtk)
     
     # Se coloca la imagen procesada en una label y se modifica la posición y el tamaño.
     imagen_procesada = processed_image 
-    imagen_procesada = cv2.resize(imagen_procesada, (585,305))                          
+    imagen_procesada = cv2.resize(imagen_procesada, (500,220))                          
     imagenCV2_2 = cv2.cvtColor(imagen_procesada, cv2.COLOR_BGR2RGBA)
     imagen_procesada = imagenCV2_2
     imagen_procesada = Image.fromarray(imagen_procesada)                                
     imgtk = ImageTk.PhotoImage(image=imagen_procesada)                                  
     
-    label_imag_PROCESADA = tk.Label(MainWindow, image=imgtk,width = 580, height = 300 )
-    label_imag_PROCESADA.place(x=719,y=167)
+    label_imag_PROCESADA = tk.Label(MainWindow, image=imgtk,width = 480, height = 200 )
+    label_imag_PROCESADA.place(x=690,y=167)
     label_imag_PROCESADA.imgtk = imgtk
     label_imag_PROCESADA.configure(image=imgtk)
     MainWindow.update()
@@ -238,6 +238,49 @@ def ask_path_camera():
         Text_ruta.config(state='disable')                              # Se inhabilita la edición del texto
         
 """----------------------------------- f. Extracción de información del esqueje ----------------------------------------------------------------------------"""
+def encontrar_medidas(imagen):
+    """
+    Función para encontrar el area foliar y tallo promedio de un esqueje
+    """
+    gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
+
+    w=gray.shape[1] #Ancho de la imagen
+    h=gray.shape[0] # Alto de la imagen
+    imgen = gray[0:h,0:w//3] # Particiono el tallo de la imagen
+    imgen_Area = gray[0:h,w//3:] # Particiono el tallo de la imagen
+
+    ai=0 # aera foliar
+    sup=0 # Parte superior de la imagen
+    inf=0 # parte inferior de la imagen
+    a1_img = imgen_Area[h//2:,:]
+    a2_img = imgen_Area[0:h//2,:]
+
+    Vei=[] # Vector para encontrar estadisticas 
+
+    for i in range(w//3):
+
+        u=np.count_nonzero(gray[0:h,i])
+        #ei += u # Recorro cada columna y encuentro lo que no son zeros
+        #print(u)
+        Vei.append(u)
+        #print(ei)
+
+    for i in range(2*w//3):
+
+        u1=np.count_nonzero(a1_img[0:h//2,i])
+        u2=np.count_nonzero(a2_img[0:h//2,i])
+        sup += u1 
+        inf += u2
+        
+
+    factor = 11.5 / 960 
+    if sup>inf:
+        ai= sup*factor**2
+    else:
+        ai=inf*factor**2
+
+    return  np.mean(Vei)*factor,ai
+
 def segmentacion(original_image):
     """Esta función es una función que tiene como parámetro de entrada la imagen original, es el core de SOCAES, pues aquí es donde se realiza la extracción de toda la información acerca del esqueje 
        que está siendo analizado. Allí se realiza un preprocesado de la imagen, operaciones de morfología y se utiliza un filtro en la detección de la hoja en base. Esta función retorna la imagen 
@@ -245,6 +288,9 @@ def segmentacion(original_image):
     
     """---------------------------- f.1. Definición e inicialización de variable ----------------------------------------------------------------------------"""
     global clase                                                                                           # Variable que almacena la clase
+    #global tallo_promedio
+    #global area_foliar                                                                                        
+    
     clasificacion='0'                                                                                      # Variable donde se almacena la clasificación del esqueje
     clase='nada'                                                                                           # Variable donde se almacena la clase del esqueje
    
@@ -269,24 +315,7 @@ def segmentacion(original_image):
     x,y,w,h = cv2.boundingRect(contorno_esqueje2)                                                          # Se encuentra el rectángulo de menor área que encierra el contorno del esqueje
     dst_roi = esqueje_rotado[y:y+h,x:x+w]                                                                  # Se toma la sección de la imagen usando la máscara dada por las dimensiones del rectángulo encontrado en la linea anterior
     
-    try:
-        #Prueba para mirar que se tiene en la imagen
-        path=os.getcwd() + "\\muestra\\a.jpg"
-        cv2.imwrite(path,dst_roi)
-
-    except: 
-        pass
-
-    try:
-        # Imagen binarizada para mirar
-        path=os.getcwd() + "\\muestra\\b.jpg"
-        imagen_binarizada_3 = imagen_binarizada_2[y:y+h,x:x+w]                                                 # Se toma la sección de la imagen usando la máscara dada por las dimensiones del rectángulo encontrado en la linea anterior
-
-        cv2.imwrite(path,imagen_binarizada_3)
-
-    except: 
-        pass
-   
+    imagen_binarizada_3 = imagen_binarizada_2[y:y+h,x:x+w] 
     cols,rows=dst_roi.shape[:2] 
     #print("col: ", cols, "Rows",rows)
                                                                            # Se obtienen las dimensiones de la imagen (Número de filas y columnas)
@@ -343,27 +372,21 @@ def segmentacion(original_image):
             d=savitzky_golay(d,11,1)
    
             # Se hace una selección usando la media
-            promedio=np.average(b[np.uint(hojabase_pixeles*0.4):np.uint0(hojabase_pixeles*0.5)])
+            promedio=np.average(b[np.uint(hojabase_pixeles*0.4):np.uintp(hojabase_pixeles*0.5)])
             valor_hojabase_pixeles=b[hojabase_pixeles]
             
-            if np.abs(valor_hojabase_pixeles-promedio)> np.uint0(promedio*0.22):      
+            if np.abs(valor_hojabase_pixeles-promedio)> np.uintp(promedio*0.22):      
                 clasificacion='3'
                 clase='Hoja en base'
 
-    try:
-        # Imagen binarizada para mirar
-        path=os.getcwd() + "\\muestra\\Rotado.jpg"                                                 # Se toma la sección de la imagen usando la máscara dada por las dimensiones del rectángulo encontrado en la linea anterior
-        cv2.imwrite(path,esqueje_rotado)
 
-    except: 
-        pass
-        
-        
+    tallo_promedio,area_foliar = encontrar_medidas(esqueje_rotado)                                      # Se llama la función para encontrar area foliar y tallo promedio del esqueje
+   
     ret_esqueje_rotado = esqueje_rotado                                                                 # Imagen que se retorna
     b,g,r = cv2.split(esqueje_rotado)                                                                   # Se obtienen las capas b,g,r
     esqueje_rotado = cv2.merge([r,g,b])                                                                 # Se cambia la imagen a r,g,b
 
-    return ret_esqueje_rotado, longitud_cm, clasificacion, clase, dst_roi.copy(), contorno_esqueje2
+    return tallo_promedio,area_foliar,ret_esqueje_rotado, longitud_cm, clasificacion, clase, dst_roi.copy(), contorno_esqueje2
     
 """------------------------------------------- g. Rotación de la imagen ----------------------------------------------------------------------------"""
 def rotateAndScale(img_binarizada, scaleFactor = 0.5, theta = 30):
@@ -419,6 +442,7 @@ def savitzky_golay(y, window_size, order, deriv=0, rate=1):
     y = np.concatenate((firstvals, y, lastvals))
     return np.convolve( m[::-1], y, mode='valid')
 
+
 """------------------------------------ i. Modo de lectura desde un directorio -----------------------------------------------------------------------------"""
 def ejecucion_directorio():
     """Esta función no tiene parámetros de entrada y es la encargada de administrar el procesamiento de los esquejes al haber seleccionado el modo de 
@@ -432,11 +456,15 @@ def ejecucion_directorio():
     global longitud_cm                                                              # Variable que almacena la longitud obtenida del esqueje dada en centímetros
     global rutas_esquejes                                                           # Variable tipo lista que almacena todas las rutas de las imagenes .TIFF del directorio seleccionado           
     global img_count                                                                # Variable que cuenta la cantidad de imagenes procesadas
+    #global tallo_promedio
+    #global area_foliar
+    
 
+    
     """--------------------------------- i.2. Validación para guardar resultados -----------------------------------------------------------------"""
     if (num_esqueje_analizado == 0):                                                # Si es el primer esqueje analizado se abre el archivo donde se almacenan los resultados
         file_results = open(ruta_lectura + "/Resultados.csv", 'w')               
-        file_results.write("Ruta Esqueje;Longitud (cm);Clasificacion\n")            # Se asigna el título de las columnas
+        file_results.write("Ruta Esqueje;Longitud (cm);Clasificacion;Area Foliar;Tallo promedio\n")            # Se asigna el título de las columnas
                        
     """------------------- i.3. Ciclo principal donde se analizan las imágenes del directorio ----------------------------------------------------"""
     for img_count in range(num_esqueje_analizado, Cantidad_imagenes+1):
@@ -447,9 +475,9 @@ def ejecucion_directorio():
         try :
             image = cv2.imread(rutas_esquejes[num_esqueje_analizado])
                     
-            esqueje_rotado, longitud_cm, classification, clase, imagenSegmentada, contorno_esqueje= segmentacion(image[100:1000,100:1200])   
+            tallo_promedio,area_foliar, esqueje_rotado, longitud_cm, classification, clase, imagenSegmentada, contorno_esqueje= segmentacion(image[100:1000,100:1200])   
             actualizar_interfaz(image,esqueje_rotado)        
-            file_results.write(rutas_esquejes[num_esqueje_analizado]+";"+str(round(longitud_cm,2))+";"+clase+"\n")
+            file_results.write(rutas_esquejes[num_esqueje_analizado]+";"+str(round(longitud_cm,2))+";"+clase+";"+str(round(area_foliar,2))+";"+str(round(tallo_promedio,2))+"\n")
             num_esqueje_analizado = img_count
 
         except :
@@ -459,8 +487,7 @@ def ejecucion_directorio():
         detener()
         messagebox.showinfo("Ejecución finalizada", "Las imágenes del directorio elegido fueron procesadas con éxito. Puede consultar la hoja de resultados en el mismo directorio donde se encuentran las imágenes.")
         file_results.close()
-              
-              
+               
 #"""--------------------------------------- j. Modo de lectura desde cámara -----------------------------------------------------------------------------"""
 def ejecucion_camera():
     """Esta función no tiene parámetros de entrada y es la encargada de administrar el procesamiento de los esquejes al haber seleccionado el modo de lectura desde la cámara. Allí se realiza la configuración 
@@ -486,6 +513,7 @@ def ejecucion_camera():
     global cont
     global plc
     global clase_codificada 
+    global Cantidad_imagenes 
                                                          
     classification='0'                                  # Se inicializa la calsificación en '0'
     vector_banda=list('000000000000')                   # Se inicializa todas las posiciones en 0 (Sin calsificación)                   
@@ -524,7 +552,7 @@ def ejecucion_camera():
 
             if (procesar_imagen==True):  # Esta linea es la que reemplaza el infrarojo, si se cumple la condicion de entrada por teclado procede a proceaar el frame obtenido.                       
                 """----------------------------------------- a.2. Obtención de las rutas de las imágenes ------------------------------------------------"""
-                ruta_lectura = "C:/UdeA/Investigacion/GEPAR/MSE/Base_de_datos/Cortos"                       # Se abre el explorador de archivos para buscar el directorio en el ordenador y se captura dicha ruta
+                ruta_lectura = "C:/Users/Administrator/Documents/GEPAR/Base_de_datos/Grande"                       # Se abre el explorador de archivos para buscar el directorio en el ordenador y se captura dicha ruta
                 rutas_esquejes = glob.glob(ruta_lectura + "/*.TIFF")      # Se genera la lista con todas las rutas de las imagenes .TIFF del directorio seleccionado
                   
                 #print("Si esta leyendo")
@@ -617,7 +645,7 @@ def repeat_event():
     el estado de la máquina y las peticiones que se tienen según los eventos transcurridos en el tiempo
     """
     leer_PLC()
-    MainWindow.after(20, repeat_event)  # La funcion que se repite cada 20ms
+    MainWindow.after(100, repeat_event)  # La funcion que se repite cada 20ms
 
 def escribir_PLC(contador,clase_codificada,velocidad,boton_start_stop):
     """
@@ -630,7 +658,8 @@ def escribir_PLC(contador,clase_codificada,velocidad,boton_start_stop):
         4. Verificación de conexion 
     """
     global plc
-    
+    global Cantidad_imagenes 
+
     boton_start_stop= not (boton_start_stop)
     
     with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as plc:
@@ -659,14 +688,15 @@ def escribir_PLC(contador,clase_codificada,velocidad,boton_start_stop):
         frame.append(0x00) # velocidad alta del variador 
         frame.append(0x00) # Velocidad baja del variador   -< VEl variador
         frame.append(0x00) # Botón Start parte alta
-        frame.append(not(boton_start_stop)) # Botón Start parte baja  ->flag_break negado
+        frame.append(boton_start_stop) # Botón Start parte baja  ->flag_break negado
         frame.append(0x00) # Palabra verificacion de conexion parte alta siempre en 0
         frame.append(0x01) # Palabra verificacion de conexion parte baja siempre en 1
 
             
         plc.sendall(frame)       
         data = plc.recv(1024)
-        print("Escrito", repr(data))
+        print("Clase:",clase_codificada)
+        print("Escrito", repr(frame))
         
         plc.close()
 
@@ -710,7 +740,7 @@ def leer_PLC():
         
         plc.sendall(frame) #Solicutd al PLC      
         data = plc.recv(1024) # Guardar datos devueltos por el PLC en el arreglo data
-        print("Recibido", repr(data))
+        #print("Recibido", repr(data))
         
     if(data[10]==1): 
         #si paso un eslavon la cámara ya tomo foto  y se procede a procesar la siguiente imagen
@@ -719,12 +749,22 @@ def leer_PLC():
         escribir_PLC(data[12],clase_codificada,1,flag_break) 
         cont+=1 
         plc.close() 
+
+        #if (num_esqueje_analizado == Cantidad_imagenes):
+            #detener()
+            #messagebox.showinfo("Ejecución finalizada", "Las imágenes del directorio elegido fueron procesadas con éxito. Puede consultar la hoja de resultados en el mismo directorio donde se encuentran las imágenes.")
+            #file_results.close()
+            
         
     else:
         # coloco contador y clasificacion en cero para enviar al plc 
-        escribir_PLC(0,0,1,flag_break) 
+        escribir_PLC(data[12],0,1,flag_break) 
         plc.close() 
     
+        #if (num_esqueje_analizado == Cantidad_imagenes):
+            #detener()
+            #messagebox.showinfo("Ejecución finalizada", "Las imágenes del directorio elegido fueron procesadas con éxito. Puede consultar la hoja de resultados en el mismo directorio donde se encuentran las imágenes.")
+            #file_results.close()
 
    
 def agregar_esqueje():
@@ -913,18 +953,20 @@ label_imag_PROCESADA = tk.Label(text='Imagen procesada', font = ("Helvetica", 18
 label_imag_PROCESADA.place(x=895,y=0)
 
 # Margenes de las imagenes
-margen_1 = tk.Canvas(width=611, height=541, bg = "#343A40", highlightbackground='#343A40')
-margen_1.place(x=38,y=35)
+margen_1 = tk.Canvas(width=570, height=501, bg = "#343A40", highlightbackground='#343A40')
+margen_1.place(x=35,y=35)
 
-margen_2 = tk.Canvas(width=611, height=541, bg = "#343A40", highlightbackground='#343A40')
-margen_2.place(x=703,y=35)
+margen_2 = tk.Canvas(width=570, height=501, bg = "#343A40", highlightbackground='#343A40')
+margen_2.place(x=663,y=35)
+
 
 # Imagenes en blanco al iniciar el programa
-label_imagenDefecto1 = tk.Label(MainWindow,width = 85, height = 35, bg = '#868E96')
+label_imagenDefecto1 = tk.Label(MainWindow,width = 78, height = 32, bg = '#868E96')
 label_imagenDefecto1.place(x=45,y=42)
 
-label_imagenDefecto2 = tk.Label(MainWindow, width = 85, height = 35, bg = '#868E96')
-label_imagenDefecto2.place(x=710,y=42)
+label_imagenDefecto2 = tk.Label(MainWindow, width = 78, height = 32, bg = '#868E96')
+label_imagenDefecto2.place(x=673,y=42)
+
 
 # Rectangulo que encierra los elementos para elegir el modo de lectura
 rectangle_1 = tk.Canvas(width=440, height=90, bg = "#4B4F65", highlightbackground='black')
@@ -968,12 +1010,8 @@ Text_clasificacion = tk.Text(font = ("calibri", 14, "bold"), width = 11, height 
 Text_clasificacion.place(x=520,y = 632)
 
 # Se crea el botón para aplicar el proceso seleccionado
-button_iniciar_detener = tk.Button(text = 'Iniciar', font = ("calibri", 14, "bold"), width = 8, height = 1, command = iniciar, fg = '#FFFFFF', bg = '#276CDE', bd=7, overrelief = "sunken")
-button_iniciar_detener.place(x = 1028,y = 638)
-
-# Se crea el botón para conectar con PLC
-button_conectar_PLC = tk.Button(text = 'Conectar PLC', font = ("calibri", 14, "bold"), width = 11, height = 1, command = conectar_PLC, fg = '#FFFFFF', bg = '#276CDE', bd=7, overrelief = "sunken")
-button_conectar_PLC.place(x = 895,y = 638)
+button_iniciar_detener = tk.Button(text = 'Iniciar', font = ("calibri", 14, "bold"), width = 10, height = 1, command = iniciar, fg = '#FFFFFF', bg = '#276CDE', bd=7, overrelief = "sunken")
+button_iniciar_detener.place(x = 935,y = 638)
 
 
 # Archivo para almacenara las variedade de esquejes 
@@ -989,13 +1027,13 @@ combox.current(0)
 combox.place(x = 935,y = 608)
 
 # Se crea un boton  para añadir una nueva variedad de esqueje
-add_button = tk.Button(MainWindow, text='Agregar', width = 7, height = 1, command= agregar_esqueje, fg = '#FFFFFF', bg = '#276CDE', overrelief = "sunken")
-add_button.place(x=1067, y=608)
+add_button = tk.Button(MainWindow, text='Agregar', width = 8, height = 1, command= agregar_esqueje, fg = '#FFFFFF', bg = '#276CDE', overrelief = "sunken")
+add_button.place(x=1070, y=608)
 
 # Crear un botón en la ventana principal para acerca de 
 about_boton = tk.Button(MainWindow, text="Acerca de",command=abrir_ventana_info)
 # Mostrar el botón en la ventana principal
-about_boton.place(x=1155,y=600)
+about_boton.place(x=1070,y=638)
 
 
 #Imagen GEPAR
