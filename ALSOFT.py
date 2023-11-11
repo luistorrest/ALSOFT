@@ -37,6 +37,10 @@ import tkinter.simpledialog as sd                                   #Librería p
 import json                                                         # Librería para crear el archivo donde se va a guardar los tipos de estquejes                           
 
 import socket                                                       # Librería para comunicación con PLC
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 """ ----------------------------------------------------------------------------------------------------------------------------------------
     -------------------------------------------------- 2. Implementación de funciones ------------------------------------------------------
     ---------------------------------------------------------------------------------------------------------------------------------------- """
@@ -600,16 +604,10 @@ def ejecucion_camera():
         except :  
             # La excepción se da cuando se leyó correctamente un frame. Se deja pasar para capturar otro frame y así­ no generar errores
             pass  
-                
-def key_pressed(event):    
-    global procesar_imagen     
-    global cont
-
-    
-    if(event.char=='a'):#si se cumple la condicion se procede a procesar la siguiente imagen
-        procesar_imagen=True                
-        ejecucion_camera()
-        cont+=1 
+""" ----------------------------------------------------------------------------------------------------------------------------------------
+    ------------------------------------------------- 3.Funciones asociadas al PLC ------------------------------------------------
+    ---------------------------------------------------------------------------------------------------------------------------------------- """
+                  
         
 def conectar_PLC():
     """
@@ -766,7 +764,10 @@ def leer_PLC():
             #messagebox.showinfo("Ejecución finalizada", "Las imágenes del directorio elegido fueron procesadas con éxito. Puede consultar la hoja de resultados en el mismo directorio donde se encuentran las imágenes.")
             #file_results.close()
 
-   
+""" ----------------------------------------------------------------------------------------------------------------------------------------
+    ------------------------------------------------- 4. Definición de funciones asociadas a botones ------------------------------------------------
+    ---------------------------------------------------------------------------------------------------------------------------------------- """
+  
 def agregar_esqueje():
     """
     Función que permite agregar una nueva variedad de esqueje desde un boton
@@ -898,14 +899,14 @@ def abrir_ventana_info():
     canvas.pack()
     
     #Redimensionar las imágenes
-    print("Redimensionando imágenes...")
+    #print("Redimensionando imágenes...")
     imagen1 = imagen1.resize((100, 100))
     imagen2 = imagen2.resize((100, 100))
     imagen3 = imagen3.resize((250, 100))
     imagen4 = imagen4.resize((200, 100))
 
     # Convertir las imágenes a formato compatible con TKinter
-    print("Convirtiendo imágenes...")
+    #print("Convirtiendo imágenes...")
     imagen1_tk = ImageTk.PhotoImage(imagen1)
     imagen2_tk = ImageTk.PhotoImage(imagen2)
     imagen3_tk = ImageTk.PhotoImage(imagen3)
@@ -913,7 +914,7 @@ def abrir_ventana_info():
 
     
     # Agregar las imágenes al Canvas
-    print("Agregando imágenes al Canvas...")
+    #print("Agregando imágenes al Canvas...")
     canvas.create_image(100, 100, image=imagen1_tk)
     canvas.create_image(250, 100, image=imagen2_tk)
     canvas.create_image(450, 100, image=imagen3_tk)
@@ -921,9 +922,58 @@ def abrir_ventana_info():
 
     # Mostrar el Canvas en la ventana
     canvas.pack() 
+
+def estadisticas():
+    """
+    Esta función tiene como objetivo localizar un archivo CSV que almacene los datos recopilados de la máquina. Posteriormente, realiza el análisis estadístico de dichos datos y genera un diagrama de torta que facilita la visualización de la distribución de cada esqueje según su especie
+    """
+    try:
+        # Abrir el cuadro de diálogo para seleccionar el archivo CSV
+        ruta_archivo = filedialog.askopenfilename(title="Seleccionar archivo CSV", filetypes=[("Archivos CSV", "*.csv")])
+
+        # Verificar si se seleccionó un archivo
+        if ruta_archivo:
+            # Cargar el archivo CSV en un DataFrame
+            df = pd.read_csv(ruta_archivo, delimiter=";")
+
+            # Calcular el conteo de clases
+            conteo_clases = df['Clasificacion'].value_counts()
+
+            # Mostrar estadísticas y plot en una nueva ventana
+            ventana_estadisticas = tk.Toplevel(MainWindow)
+            ventana_estadisticas.title("Estadísticas")
+            ventana_estadisticas.configure(bg="#314354", highlightbackground='#343A40')
+
+            # Crear un widget de texto para mostrar las estadísticas
+            texto_estadisticas = tk.Text(ventana_estadisticas, wrap="word")
+            texto_estadisticas.insert("1.0", f"Estadísticas:\n\n{df.describe()}\n\nConteo de clases:\n\n{conteo_clases}")
+            texto_estadisticas.pack(expand=True, fill="both")
+
+            # Crear un subplot más pequeño para el plot de barras
+            fig, ax = plt.subplots(figsize=(4, 3))
+            conteo_clases.plot(kind='pie', ax=ax)
+            ax.set_title('Conteo de Clases')
+            ax.set_xlabel('Clasificación')
+            ax.set_ylabel('Frecuencia')
+
+            # Agregar el plot a la ventana tkinter
+            canvas = FigureCanvasTkAgg(fig, master=ventana_estadisticas)
+            canvas.draw()
+            canvas.get_tk_widget().pack(expand=True, fill="both", side="top", pady=(0,0),ipady=0)
+
+
+        else:
+            messagebox.showwarning("Advertencia", "No se seleccionó ningún archivo CSV.")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"No se pudo cargar el archivo CSV. Error: {e}")
+
+
+
 """ ----------------------------------------------------------------------------------------------------------------------------------------
-    ------------------------------------------------- 3. Definición de la ventana principal ------------------------------------------------
+    ------------------------------------------------- 4. Definición de la ventana principal ------------------------------------------------
     ---------------------------------------------------------------------------------------------------------------------------------------- """
+
 
 global cantidad_esquejes
 cantidad_esquejes = 0
@@ -969,7 +1019,7 @@ label_imagenDefecto2.place(x=673,y=42)
 
 
 # Rectangulo que encierra los elementos para elegir el modo de lectura
-rectangle_1 = tk.Canvas(width=440, height=90, bg = "#4B4F65", highlightbackground='black')
+rectangle_1 = tk.Canvas(width=540, height=90, bg = "#4B4F65", highlightbackground='black')
 rectangle_1.place(x = 703,y = 600)
 
 # Rectangulo que encierra los labels que muestran la información obtenida 
@@ -1031,26 +1081,30 @@ add_button = tk.Button(MainWindow, text='Agregar', width = 8, height = 1, comman
 add_button.place(x=1070, y=608)
 
 # Crear un botón en la ventana principal para acerca de 
-about_boton = tk.Button(MainWindow, text="Acerca de",command=abrir_ventana_info)
-# Mostrar el botón en la ventana principal
+about_boton = tk.Button(MainWindow, text="Acerca de",width = 8, height = 1,command=abrir_ventana_info,fg = '#FFFFFF', bg = '#276CDE', overrelief = "sunken")
 about_boton.place(x=1070,y=638)
 
+#Botón para estadísticas
+boton_cargar = tk.Button(MainWindow, text="Estadísticas", width = 8, height = 1, command=estadisticas, fg = '#FFFFFF', bg = '#276CDE', overrelief = "sunken")
+boton_cargar.place(x=1150,y=608)
 
 #Imagen GEPAR
-#gepar = ImageTk.PhotoImage(file="gepar.png")
-#label_gepar = tk.Label(image=gepar)
-#label_gepar.place(x = 1155,y = 600)
+gepar = ImageTk.PhotoImage(file="gepar.png")
+label_gepar = tk.Label(image=gepar)
+label_gepar.place(x = 38,y = 700)
 
 #Imagen UDEA
-#udea = ImageTk.PhotoImage(file="udea.png")
-#label_udea = tk.Label(image=udea)
-#label_udea.place(x = 1240,y = 600)
+udea = ImageTk.PhotoImage(file="udea.png")
+label_udea = tk.Label(image=udea)
+label_udea.place(x = 138,y = 700)
+
+#Imagen UDEA
+GDM = ImageTk.PhotoImage(file="GDM_logo.jpg")
+label_gdm = tk.Label(image=GDM)
+label_gdm.place(x = 228,y = 700)
 
 #icono GEPAR
 #icono = MainWindow.iconbitmap("gepar.ico")
-
-MainWindow.bind("<Key>",key_pressed)
-
 
 frame.pack()
 
