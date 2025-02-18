@@ -9,10 +9,10 @@
     --------------- Project Name: Clasificación de esquejes mediante técnicas de visión artificial --------------------------------------
     -------------------------------------------------------------------------------------------------------------------------------------
     ----------Description: En este proyecto se pretende implementar un algoritmo que permita clasificar los esquejes que son ------------
-                           ingresados a la máquina clasificadora, de modo que a cada uno de ellos se les asigne una clasificación -------
-                           para ser separados a través del sistema neumático. -----------------------------------------------------------
+                        ingresados a la máquina clasificadora, de modo que a cada uno de ellos se les asigne una clasificación -------
+                        para ser separados a través del sistema neumático. -----------------------------------------------------------
     ------------------------------------------------------------------------------------------------------------------------------------- """
-                       
+                    
                                                                                                                 
 """ -----------------------------------------------------------------------------------------------------------------------------------------
     -------------------------------- 1. Importación de las librerí­as necesarias para el programa --------------------------------------------
@@ -42,6 +42,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import simpledialog
 
+import time
 
 global velocidad_variador  # Definir la variable velocidad como global 
 
@@ -87,10 +88,10 @@ def ask_path_directorio():
 """----------------------------------------------b. Inicio de la ejecución -------------------------------------------------------------------"""
 def iniciar():
     """Esta función no tiene parámetros de entrada y es la encargada de dar inicio al procesamiento de las imágenes. Allí se identifica el método 
-       de lectura que se eligió y el tipo de esquejes que se van a procesar y con base en esta información se da inicio al análisis de las imágenes. 
-       Esta función se ejecuta como respuesta al botón “Iniciar”, y cada vez que se invoque cambia el estado del botón a “Detener” y asocia dicho botón 
-       a la función detener(). No se retorna ninguna variable."""
-       
+    de lectura que se eligió y el tipo de esquejes que se van a procesar y con base en esta información se da inicio al análisis de las imágenes. 
+    Esta función se ejecuta como respuesta al botón “Iniciar”, y cada vez que se invoque cambia el estado del botón a “Detener” y asocia dicho botón 
+    a la función detener(). No se retorna ninguna variable."""
+    
     """---------------------------------------- b.1. Definición de variables -----------------------------------------------------------------"""
     global factor                                                   # Factor de conversión para pasar de cm a pixeles y viceversa
     global corto_cm                                                 # Longitud de un esqueje corto dada en cm, acorde a la clase elegida 
@@ -100,6 +101,7 @@ def iniciar():
     global corto_pixeles                                            # Longitud de un esqueje corto convertida a pixeles
     global largo_pixeles                                            # Longitud de un esqueje largo convertida a pixeles
     global hojabase_pixeles                                         # Longitud de un esqueje con hoja en base convertida a pixeles
+    global capture
 
     proceso = combox.get()                                          # Se obtiene el tipo de esquejes elegido desde el combox
     largo, corto, hoja_base = get_params_by_name(proceso)  
@@ -110,7 +112,7 @@ def iniciar():
 
     """-------------------------------------- b.2. Tipo de esquejes a clasificar --------------------------------------------------------------"""
     # Proceso para clasificar los esquejes de la clase Atlantis
-   # if proceso == 'Atlantis':
+# if proceso == 'Atlantis':
 
         #corto_cm = 7.56                                             # Se asigna la longitud de un esqueje corto dada en cm, acorde a la clase Atlantis     
         #largo_cm = 8.99                                             # Se asigna la longitud de un esqueje largo dada en cm, acorde a la clase Atlantis
@@ -133,7 +135,7 @@ def iniciar():
             Hoja_base_cm = umbral de longitud para hoja en base"""
 
     """--------------------------------------- b.3. Asignación de variables ---------------------------------------------------------------------"""
-    factor = 11.5 / 960                                             # Se inicializa el factor de conversión
+    factor = 11.5 / 680                                             # Se inicializa el factor de conversión
     flag_break = 0                                                  # Se inicializa la bandera en 0               
 
     # Se realiza la tansformación a pixeles de los valores ingresados en centí­metros, usando el factor de conversión
@@ -148,16 +150,24 @@ def iniciar():
 
     """---------------------------------- b.5. Validación al modo de lectura ----------------------------------------------------------------------"""
     # Acorde al estado del radiobutton se  ejecuta la función asociado a lectura desde directorio o desde la cámara
-   
+
     
-   
+
     if (state_radiobutton.get() == 1):
         ejecucion_directorio()                                      # Se ejecuta la función asociada a la lectura de las imágenes desde un directorio            
         
     elif (state_radiobutton.get() == 2):
         #mostrar_ventana_auxiliar()                            # Se ejecuta la función asociada a la lectura de las imágenes desde la cámara
+        
+        if capture is None:
+            capture = cv2.VideoCapture(0)
+            
+        if not capture.isOpened():
+            messagebox.showerror("Mensaje de error", "No se detecta la cámara de la máquina, por favor conéctela.")
+            return 0
+        
         conectar_PLC()
-        ejecucion_camera()  
+        #ejecucion_camera()  
     else:                                                           # Si no se detecta el modo de lectura aparece este error
         messagebox.showerror("Mensaje de error","No se ha detectado el modo de lectura, por favor elí­jalo.")                                            
         detener()
@@ -165,9 +175,9 @@ def iniciar():
 """-------------------------------------------- c. Detención de la ejecución ---------------------------------------------------------------------"""
 def detener():
     """Esta función no posee parámetros de entrada y se ejecuta al dar clic sobre el botón “Detener”. Allí se cambia el valor de una variable tipo bandera 
-       de la cual depende la detención del proceso de ejecución así que se detendrá el ciclo, independientemente del tipo de lectura. Adicionalmente, cada 
-       vez que se invoque esta función cambia el estado del botón a “Iniciar” y asocia dicho botón a la función iniciar(). No se retorna ninguna variable."""
-       
+    de la cual depende la detención del proceso de ejecución así que se detendrá el ciclo, independientemente del tipo de lectura. Adicionalmente, cada 
+    vez que se invoque esta función cambia el estado del botón a “Iniciar” y asocia dicho botón a la función iniciar(). No se retorna ninguna variable."""
+    
     global flag_break                                               # Bandera que cuando vale 1 indica que se debe detener el procesamiento de las imágenes  
     flag_break = 1                                                  # Se asigna el valor de 1 para detener el procesamiento de las imágenes
     button_iniciar_detener.config(text='Iniciar',command=iniciar)   # Se reconfigura el botón para que se pueda iniciar/reanudar la ejecución con él  
@@ -175,8 +185,8 @@ def detener():
 """-------------------------------------- d. Actualización de la interfaz gráfica ------------------------------------------------------------------"""
 def actualizar_interfaz(original_image,processed_image):
     """Esta función tiene como parámetros de entrada la imagen original del esqueje y la imagen procesada de éste. Cada vez que se ejecuta esta función se 
-       actualizan las imágenes del esqueje que se muestra en la interfaz. Adicionalmente en los text edit se actualiza la información obtenida de la 
-       clasificación y longitud del esqueje analizado y el número de esquejes analizados hasta el momento. No se retorna ninguna variable."""
+    actualizan las imágenes del esqueje que se muestra en la interfaz. Adicionalmente en los text edit se actualiza la información obtenida de la 
+    clasificación y longitud del esqueje analizado y el número de esquejes analizados hasta el momento. No se retorna ninguna variable."""
 
     """---------------------- d.1. Actualización de la infomación de los Widgets de texto  ---------------------------------------------------------"""
     Text_longitud.delete('1.0', tk.END)                            # Se elimina el texto que habí­a anteriormente en el Widget
@@ -185,7 +195,7 @@ def actualizar_interfaz(original_image,processed_image):
     Text_longitud.tag_add("center",1.0,"end")                      # Se agrega dicha justificación al Widget 
     
     Text_cantidad.delete('1.0', tk.END)                            # Se elimina el texto que habí­a anteriormente en el Label 
-    Text_cantidad.insert("insert",str(num_esqueje_analizado+1))    # Se inserta en el Widget el texto asociado a la cantidad de imágenes procesadas
+    Text_cantidad.insert("insert",str(num_esqueje_analizado))    # Se inserta en el Widget el texto asociado a la cantidad de imágenes procesadas
     Text_cantidad.tag_configure("center", justify = 'center')      # Se configura el Widget para justificar el texto centrado
     Text_cantidad.tag_add("center",1.0,"end")                      # Se agrega dicha justificación al Widget 
     
@@ -202,7 +212,7 @@ def actualizar_interfaz(original_image,processed_image):
     imagen_original = imagenCV2
     imagen_original = Image.fromarray(imagen_original)                                  
     imgtk = ImageTk.PhotoImage(image=imagen_original)                                  
-     
+    
     label_imag_ORIGINAL = tk.Label(MainWindow, image=imgtk,width = 550, height = 480 )
     label_imag_ORIGINAL.place(x=45,y=42)
     label_imag_ORIGINAL.imgtk = imgtk
@@ -225,8 +235,8 @@ def actualizar_interfaz(original_image,processed_image):
 """----------------------------------- e. Elección del directorio para el guardado --------------------------------------------------------------------"""
 def ask_path_camera():
     """Esta función es una función sin parámetros de entrada la cual muestra en pantalla una interfaz de diálogo, donde si el usuario desea guardar 
-       la imagenes capturadas se abre un explorador de archivos para seleccionar la ruta donde se desea guardar las imágenes que serán procesadas, 
-       adicionalmente, genera un label que muestra la ruta elegida en la interfaz. No se retorna ninguna variable."""
+    la imagenes capturadas se abre un explorador de archivos para seleccionar la ruta donde se desea guardar las imágenes que serán procesadas, 
+    adicionalmente, genera un label que muestra la ruta elegida en la interfaz. No se retorna ninguna variable."""
     
     """-------------------------------------- e.1. Definición de variables  ---------------------------------------------------------------------------"""
     global ruta_almacenamiento                                         # Variable donde se almacena la ruta del directorio donde estan las imagenes a procesar                               
@@ -253,58 +263,46 @@ def encontrar_medidas(imagen):
     """
     gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
 
-    w=gray.shape[1] #Ancho de la imagen
-    h=gray.shape[0] # Alto de la imagen
-    imgen = gray[0:h,0:w//3] # Particiono el tallo de la imagen
-    imgen_Area = gray[0:h,w//3:] # Particiono el tallo de la imagen
+    h, w = gray.shape
+    stem_area = gray[:, :w // 3]
+    leaf_area = gray[:, w // 3:]
 
-    ai=0 # aera foliar
-    sup=0 # Parte superior de la imagen
-    inf=0 # parte inferior de la imagen
-    a1_img = imgen_Area[h//2:,:]
-    a2_img = imgen_Area[0:h//2,:]
+    # Count non-zero pixels in stem area to find average stem width
+    stem_nonzero_counts = np.count_nonzero(stem_area, axis=0)
+    average_stem_width = np.mean(stem_nonzero_counts)
 
-    Vei=[] # Vector para encontrar estadisticas 
+    # Split leaf area into upper and lower halves
+    upper_leaf_area = leaf_area[:h // 2, :]
+    lower_leaf_area = leaf_area[h // 2:, :]
 
-    for i in range(w//3):
+    # Count non-zero pixels in both halves to find leaf area
+    upper_nonzero_counts = np.count_nonzero(upper_leaf_area)
+    lower_nonzero_counts = np.count_nonzero(lower_leaf_area)
 
-        u=np.count_nonzero(gray[0:h,i])
-        #ei += u # Recorro cada columna y encuentro lo que no son zeros
-        #print(u)
-        Vei.append(u)
-        #print(ei)
+    # Determine the larger leaf area
+    larger_leaf_area = max(upper_nonzero_counts, lower_nonzero_counts)
 
-    for i in range(2*w//3):
+    # Scale factor for area calculation
+    scale_factor = (10.5 / 960) ** 2
 
-        u1=np.count_nonzero(a1_img[0:h//2,i])
-        u2=np.count_nonzero(a2_img[0:h//2,i])
-        sup += u1 
-        inf += u2
-        
+    # Calculate scaled leaf area
+    leaf_area_scaled = larger_leaf_area * scale_factor
 
-    factor = 11.5 / 960 
-    if sup>inf:
-        ai= sup*factor**2
-    else:
-        ai=inf*factor**2
-
-    return  np.mean(Vei)*factor,ai
+    return average_stem_width * scale_factor, leaf_area_scaled
 
 def segmentacion(original_image):
     """Esta función es una función que tiene como parámetro de entrada la imagen original, es el core de SOCAES, pues aquí es donde se realiza la extracción de toda la información acerca del esqueje 
-       que está siendo analizado. Allí se realiza un preprocesado de la imagen, operaciones de morfología y se utiliza un filtro en la detección de la hoja en base. Esta función retorna la imagen 
-       procesada e información asociada al esqueje como longitud en centímetros y clasificación.""" 
+    que está siendo analizado. Allí se realiza un preprocesado de la imagen, operaciones de morfología y se utiliza un filtro en la detección de la hoja en base. Esta función retorna la imagen 
+    procesada e información asociada al esqueje como longitud en centímetros y clasificación.""" 
     
     """---------------------------- f.1. Definición e inicialización de variable ----------------------------------------------------------------------------"""
-    global clase                                                                                           # Variable que almacena la clase
-    #global tallo_promedio
-    #global area_foliar                                                                                        
+    global clase                                                                                           # Variable que almacena la clase                                                                                    
     
     clasificacion='0'                                                                                      # Variable donde se almacena la clasificación del esqueje
-    clase='nada'                                                                                           # Variable donde se almacena la clase del esqueje
-   
+    clase='Nada'                                                                                           # Variable donde se almacena la clase del esqueje
+
     """---------------------- f.2. Preprocesado y extracción de contornos de la imagen -----------------------------------------------------------------------"""
-    ret,imagen_binarizada = cv2.threshold(original_image[:,:,0],50,255,cv2.THRESH_BINARY_INV)              # Se pasa la imagen a escala de grises y se realiza una binarización invertida con un umbral de 50
+    ret,imagen_binarizada = cv2.threshold(original_image[:,:,0],20,255,cv2.THRESH_BINARY_INV)              # Se pasa la imagen a escala de grises y se realiza una binarización invertida con un umbral de 50
     contours, hierarchy = cv2.findContours(imagen_binarizada,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)     # Se encuetra los contornos de la imagen binarizada
     contours = sorted(contours, key=cv2.contourArea,reverse=True)                                          # Se ordenan los contornos de mayor area a menor area  
     
@@ -327,17 +325,17 @@ def segmentacion(original_image):
     imagen_binarizada_3 = imagen_binarizada_2[y:y+h,x:x+w] 
     cols,rows=dst_roi.shape[:2] 
     #print("col: ", cols, "Rows",rows)
-                                                                           # Se obtienen las dimensiones de la imagen (Número de filas y columnas)
+                                                                        # Se obtienen las dimensiones de la imagen (Número de filas y columnas)
     """----------------------------------- f.3. Validación para rotar la imagen 90° -----------------------------------------------------------------------"""
     if rows<cols:                                                                                          # Si el número de filas es menor que de columnas se hace una rotación de 90° 
-        esqueje_rotado = rotateAndScale(dst_roi,1,90)
-        imagen_binarizada_3 = rotateAndScale(imagen_binarizada_3,1,90)            
+        esqueje_rotado = rotateAndScale(dst_roi,0.5,90)
+        imagen_binarizada_3 = rotateAndScale(imagen_binarizada_3,0.5,90)            
     
     """------------------------------------------- f.4. Aplicación morfoligía -----------------------------------------------------------------------------"""
     kernel = np.ones((5,11),np.uint8)                                                                      # Definición del elemento estructurante
     imagen_binarizada_3 = cv2.morphologyEx(imagen_binarizada_3, cv2.MORPH_OPEN, kernel)                    # Se realiza una apertura 
     cols,rows=dst_roi.shape[:2]                                                                            # Se obtienen las dimensiones de la imagen (Número de filas y columnas)
-          
+        
     longitud_cm = cols*factor                                                                              # Se convierte la longitud a centímetros multiplicando por el factor de conversión  
     
     """-------------------------- f.5. Asignación de la clasificación y clase del esqueje -------------------------------------------------------------------"""
@@ -349,13 +347,16 @@ def segmentacion(original_image):
         clase='Largo'
     elif cols<200 or rows<20:                                                                              # La imagen no tiene clasificacion si el número de columnnas es menor que 200 pixeles o el número de filas es menor que 20
         clasificacion='0'
-        clase='nada'
+        clase='Nada'
     elif cols>corto_pixeles and cols<largo_pixeles:                                                        # El esqueje es ideal si el número de columnnas es mayor a la longitud de un esqueje corto en pixeles y menor a la longitud de un esqueje largo en pixeles
         clasificacion='4'
         clase='Ideal'
+    else:       
+        clasificacion='0'
+        clase='Vacio'
     
     """----------------------------------- f.6. Proceso para hallar hoja en base ----------------------------------------------------------------------------"""
-    if clase != 'corto':
+    if clase != 'Corto':
         a=0  
         b=0
         d=0
@@ -379,7 +380,7 @@ def segmentacion(original_image):
             b=savitzky_golay(b,11,1)
             d=np.diff(b)
             d=savitzky_golay(d,11,1)
-   
+
             # Se hace una selección usando la media
             promedio=np.average(b[np.uint(hojabase_pixeles*0.4):np.uintp(hojabase_pixeles*0.5)])
             valor_hojabase_pixeles=b[hojabase_pixeles]
@@ -390,7 +391,7 @@ def segmentacion(original_image):
 
 
     tallo_promedio,area_foliar = encontrar_medidas(esqueje_rotado)                                      # Se llama la función para encontrar area foliar y tallo promedio del esqueje
-   
+
     ret_esqueje_rotado = esqueje_rotado                                                                 # Imagen que se retorna
     b,g,r = cv2.split(esqueje_rotado)                                                                   # Se obtienen las capas b,g,r
     esqueje_rotado = cv2.merge([r,g,b])                                                                 # Se cambia la imagen a r,g,b
@@ -400,8 +401,8 @@ def segmentacion(original_image):
 """------------------------------------------- g. Rotación de la imagen ----------------------------------------------------------------------------"""
 def rotateAndScale(img_binarizada, scaleFactor = 0.5, theta = 30):
     """Esta Función tiene como parámetros de entreda la imagen binarizada, un factor de escala para cambiar el tamaño de la imagen y el ángulo que se desea
-       rotar la imagen. Esta función tiene como retorno la imagen rotada."""
-       
+    rotar la imagen. Esta función tiene como retorno la imagen rotada."""
+    
     (old_filas,old_columnas) = img_binarizada.shape[:2]                                                                                       # Se obtiene el número de  filas y columnas de la imagen 
     Matriz_rotada = cv2.getRotationMatrix2D(center=(old_columnas/2,old_filas/2), angle=theta, scale=scaleFactor)                              # Rota la imagen theta grados alrededor se su centro
     
@@ -455,8 +456,8 @@ def savitzky_golay(y, window_size, order, deriv=0, rate=1):
 """------------------------------------ i. Modo de lectura desde un directorio -----------------------------------------------------------------------------"""
 def ejecucion_directorio():
     """Esta función no tiene parámetros de entrada y es la encargada de administrar el procesamiento de los esquejes al haber seleccionado el modo de 
-       lectura desde un directorio."""
-       
+    lectura desde un directorio."""
+    
     """---------------------------------------- i.1. Definición de variables -----------------------------------------------------------------"""
     global ruta_lectura                                                             # Variable donde se almacena la ruta del directorio donde estan las imagenes a procesar
     global clase                                                                    # Variable que almacena la clase
@@ -465,8 +466,6 @@ def ejecucion_directorio():
     global longitud_cm                                                              # Variable que almacena la longitud obtenida del esqueje dada en centímetros
     global rutas_esquejes                                                           # Variable tipo lista que almacena todas las rutas de las imagenes .TIFF del directorio seleccionado           
     global img_count                                                                # Variable que cuenta la cantidad de imagenes procesadas
-    #global tallo_promedio
-    #global area_foliar
     
 
     
@@ -474,7 +473,7 @@ def ejecucion_directorio():
     if (num_esqueje_analizado == 0):                                                # Si es el primer esqueje analizado se abre el archivo donde se almacenan los resultados
         file_results = open(ruta_lectura + "/Resultados.csv", 'w')               
         file_results.write("Ruta Esqueje;Longitud (cm);Clasificacion;Area Foliar;Tallo promedio\n")            # Se asigna el título de las columnas
-                       
+                    
     """------------------- i.3. Ciclo principal donde se analizan las imágenes del directorio ----------------------------------------------------"""
     for img_count in range(num_esqueje_analizado, Cantidad_imagenes+1):
 
@@ -496,22 +495,19 @@ def ejecucion_directorio():
         detener()
         messagebox.showinfo("Ejecución finalizada", "Las imágenes del directorio elegido fueron procesadas con éxito. Puede consultar la hoja de resultados en el mismo directorio donde se encuentran las imágenes.")
         file_results.close()
-               
+            
 #"""--------------------------------------- j. Modo de lectura desde cámara -----------------------------------------------------------------------------"""
-def ejecucion_camera():
+def ejecucion_camera(image):
     """Esta función no tiene parámetros de entrada y es la encargada de administrar el procesamiento de los esquejes al haber seleccionado el modo de lectura desde la cámara. Allí se realiza la configuración 
-       del puerto serial y de la cámara, asegurándose de que efectivamente están disponibles estos dispositivos. Luego se inicia el ciclo infinito donde se captura la imagen y se procesa haciendo uso de la 
-       función segmentacion().No se retorna ninguna variable."""
-       
-    """---------------------------- j.1. Definición e inicialización de variables -----------------------------------------------------------------------"""
-    global my_deque                                     # Se define una variable tipo deque con base en el vector banda
-    global num_esqueje_analizado                        # Contador de la cantidad de imagenes analizadas (Generación de base de datos )
+    del puerto serial y de la cámara, asegurándose de que efectivamente están disponibles estos dispositivos. Luego se inicia el ciclo infinito donde se captura la imagen y se procesa haciendo uso de la 
+    función segmentacion(). No se retorna ninguna variable."""
+    
+    global num_esqueje_analizado  # Contador de la cantidad de imágenes analizadas (Generación de base de datos)
     global Text_ruta
-    global vector_banda                                 # Arreglo que permitirá administrar las posiciones de los esquejes en la banda  
-    global corto_pixeles                                # Medidad de esquejes cortos en pixeles
-    global largo_pixeles                                # Medidad de esquejes largos en pixeles
-    global classification                               # Clasificación asignada al esqueje analizado
-    global hojabase_pixeles                             # Medidad de hoja en base en pixeles
+    global corto_pixeles  # Medida de esquejes cortos en pixeles
+    global largo_pixeles  # Medida de esquejes largos en pixeles
+    global classification  # Clasificación asignada al esqueje analizado
+    global hojabase_pixeles  # Medida de hoja en base en pixeles
     global cantidad_esquejes
     global longitud_cm
     global ruta_almacenamiento                                       
@@ -521,93 +517,60 @@ def ejecucion_camera():
     global plc
     global clase_codificada 
     global Cantidad_imagenes 
-        
+    global capture  # Camera capture object
 
-    classification='0'                                  # Se inicializa la calsificación en '0'
-    vector_banda=list('000000000000')                   # Se inicializa todas las posiciones en 0 (Sin calsificación)                   
-    my_deque = deque(vector_banda)  
-    
-        
+    procesar_imagen=True   
+           
     try:
         Text_ruta.destroy()
     except:
         pass
-    
-    """------------------------------------- j.2. Inicialización de la cámara ----------------------------------------------------------------------------""" 
-    #capture = cv2.VideoCapture(0)
-    #index = capture.set(cv2.CAP_PROP_FPS,30)
-    #capture.set(3,1280)
-    #capture.set(4,1024)
-    #count = capture.get(cv2.CAP_PROP_FRAME_COUNT)
-    #capture.set(cv2.CAP_PROP_POS_FRAMES,count-1)
-    #capture.set(cv2.CAP_PROP_SETTINGS, 0); 
-#    cv2.waitKey(10000)
-
- 
-    #ret, frame = capture.read()          # Se realiza la captura de un frame usando la variable tipo video 
-    ret=False
-    if(ret == True):
-         messagebox.showerror("Mensaje de error","No se detecta la cámara de la máquina, por favor conéctela.")
-         return 0
-        
-    
-
-    """------------------- j.4. Ciclo para realizar la captura frame por frame de las imagenes de los esquejes------------------------------------""" 
-    #while(flag_break == 0):        
-            # Se intenta procesar un frame utilizando una excepción para evitar problemas con los frames errados   
-    if(flag_break == 0):
-        try:               
-            """-------------------------- j.4.1. Lectura del frame y valor serial-----------------------------------------------------------------""" 
-
-            if (procesar_imagen==True):  # Esta linea es la que reemplaza el infrarojo, si se cumple la condicion de entrada por teclado procede a proceaar el frame obtenido.                       
-                """----------------------------------------- a.2. Obtención de las rutas de las imágenes ------------------------------------------------"""
-                ruta_lectura = "C:/Users/Administrator/Documents/GEPAR/Base_de_datos/Grande"                       # Se abre el explorador de archivos para buscar el directorio en el ordenador y se captura dicha ruta
-                rutas_esquejes = glob.glob(ruta_lectura + "/*.TIFF")      # Se genera la lista con todas las rutas de las imagenes .TIFF del directorio seleccionado
-
-                frame = cv2.imread(rutas_esquejes[cantidad_esquejes])#En ves de leer la camara, se lee un archivo donde estab las imagenes guardadas
-                image = frame.copy()           
-                procesar_imagen=False
-                                     
-                #Se invoca la funcion 'segmentación' con la imagen capturada pero seleccionando una región para evitar bordes del frame original
-                tallo_promedio,area_foliar,esqueje_rotado, longitud_cm, classification, clase, imagenSegmentada, contorno_esqueje= segmentacion(image[100:1000,100:1200]) 
-                #prin("Segmento")
-                """-----------   j.4.2.1. Validación para guardado de la imagen capturada -----------------------------------------------------------""" 
-                if (almacenamiento == 'yes'):
-                    cv2.imwrite(ruta_almacenamiento +'_'+ clase +'_'+ str(cantidad_esquejes+1) + '.TIFF',image)#Se guarda la imagen con la ruta predeterminada        
-
-                """-----------   j.4.2.2. Envió de señales para encender LED ------------------------------------------------------""" 
+    if flag_break == 0:
+        try: 
+           
+            if procesar_imagen:  # Esta línea reemplaza el infrarrojo, si se cumple la condición de entrada por teclado procede a procesar el frame obtenido.
+                procesar_imagen = False
+                # Se invoca la función 'segmentacion' con la imagen capturada pero seleccionando una región para evitar bordes del frame original
+                tallo_promedio, area_foliar, esqueje_rotado, longitud_cm, classification, clase, imagenSegmentada, contorno_esqueje = segmentacion(image[100:1000, 100:1200])
+                #print(f"Segmentation result: {classification}, {clase}")  # Debug statement
                 
-                if(clase=="Vacio"): 
+                if almacenamiento == 'yes':
+                    save_path = f"{ruta_almacenamiento}_{clase}_{cantidad_esquejes + 1}.TIFF"
+                    cv2.imwrite(save_path, image)  # Se guarda la imagen con la ruta predeterminada
+                    #cv2.imwrite(save_path,esqueje_rotado)
+                    #print(f"Image saved at: {save_path}")  # Debug statement
+
+                if clase == "Vacio" or clase=='Nada': 
                     clase_codificada = 0
- 
-                        
-                elif(clase=="Largo"):                   # Si el esqueje es largo, se envia la señal para disparar el segundo actuador    
+                elif clase == "Largo":  # Si el esqueje es largo, se envía la señal para disparar el segundo actuador    
                     clase_codificada = 1
-
-            
-                elif(clase=="Hoja en base"):            # Si el esqueje tiene hoja en base, se envia la señal para disparar el tercer actuador
+                elif clase == "Hoja en base":  # Si el esqueje tiene hoja en base, se envía la señal para disparar el tercer actuador
                     clase_codificada = 2
-
-                    
-                elif(clase=="Corto"):                   # Si el esqueje es largo, se envia la señal para disparar el segundo actuador    
+                elif clase == "Corto":  # Si el esqueje es corto, se envía la señal para disparar el segundo actuador    
                     clase_codificada = 3
-
-                    
-                elif(clase=="Ideal"):                   # Si el esqueje es ideal.
+                elif clase == "Ideal":  # Si el esqueje es ideal.
                     clase_codificada = 4
-
-                
-                else:                                   # Si retorna más de un esqueje
+                else:  # Si retorna más de un esqueje
                     clase_codificada = 5
-                              
-                
-                cantidad_esquejes = cantidad_esquejes + 1     # Se aumenta en uno el contador de las imagenes procesadas                
-                num_esqueje_analizado = cont    
-                actualizar_interfaz(image,esqueje_rotado)     # Se invoca la función para actualziar la interfaz
-        
-        except :  
-            # La excepción se da cuando se leyó correctamente un frame. Se deja pasar para capturar otro frame y así­ no generar errores
-            pass  
+ 
+                cantidad_esquejes += 1  # Se aumenta en uno el contador de las imágenes procesadas                
+                num_esqueje_analizado = cantidad_esquejes
+                if clase == "Vacio" or clase=='Nada':
+                    actualizar_interfaz(image, 0*esqueje_rotado)  # Se invoca la función para actualizar la interfaz    
+                else:
+                    actualizar_interfaz(image, esqueje_rotado)  # Se invoca la función para actualizar la interfaz
+               
+        except Exception as e: 
+
+            classification = '0'  # Se inaliza la clasificación en '0'
+            longitud_cm=0
+            #print(f"Error: {e}")        
+            #tallo_promedio, area_foliar, esqueje_rotado, longitud_cm, classification, clase, imagenSegmentada, contorno_esqueje = segmentacion(image[100:1000, 100:1200]) 
+            #time.sleep(0.01)
+            cantidad_esquejes += 0  # Se aumenta en uno el contador de las imágenes procesadas 
+            num_esqueje_analizado = cantidad_esquejes
+            actualizar_interfaz(image, image*0)  # Se invoca la función para actualizar la interfaz
+               
 """ ----------------------------------------------------------------------------------------------------------------------------------------
     ------------------------------------------------- 3.Funciones asociadas al PLC ------------------------------------------------
     ---------------------------------------------------------------------------------------------------------------------------------------- """
@@ -629,11 +592,11 @@ def conectar_PLC():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as plc:
             plc.settimeout(5)                   # Establecer un tiempo de espera para la conexión
             plc.connect((host, port))           #Conectar el PLC a la IP y puerto asignado
-            velocidad_variador = 90
+            velocidad_variador = 60 
             text_velocidad_banda.insert(0,velocidad_variador)
             messagebox.showinfo("Conexión establecida","Se ha establecido la conexion con el PLC, puede continuar con la ejecución del programa")
             repeat_event()
-            ejecucion_camera()
+            #ejecucion_camera()
             
     except ConnectionRefusedError:  
         messagebox.showerror("ERROR","No se pudo conectar al PLC. Verifica la dirección y el puerto.")
@@ -650,7 +613,7 @@ def repeat_event():
     el estado de la máquina y las peticiones que se tienen según los eventos transcurridos en el tiempo
     """
     leer_PLC()
-    MainWindow.after(100, repeat_event)  # La funcion que se repite cada 20ms
+    MainWindow.after(120, repeat_event)  # La funcion que se repite cada 20ms
 
 def actualizar_velocidad(event=None):
     global velocidad_variador
@@ -666,7 +629,7 @@ def actualizar_velocidad(event=None):
         #text_velocidad_banda.insert(0,velocidad_variador)
 
     #print (velocidad_variador)
-  
+
 
 def escribir_PLC(contador,clase_codificada,boton_start_stop):
     """
@@ -688,9 +651,7 @@ def escribir_PLC(contador,clase_codificada,boton_start_stop):
     with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as plc:
         plc.connect(("192.168.1.5",502))
 
-       
-        print(velocidad_variador)
-
+    
         # trama = "\x00\x00\x00\x00\x00\x06\x01\x03\x10\x00\x00\x01"
         #for contador in range (0,5):
         frame = bytearray()
@@ -719,16 +680,8 @@ def escribir_PLC(contador,clase_codificada,boton_start_stop):
         frame.append(0x01) # Palabra verificacion de conexion parte baja siempre en 1
 
 
-       
-
-            
         plc.sendall(frame)       
-        data = plc.recv(1024)
-        #print("Clase:",clase_codificada)
-        #print("Enviado",frame)
-        #print("Obtenido", repr(data))
-        #print("Estado boton",boton_start_stop)
-        
+        data = plc.recv(1024)        
         plc.close()
 
 def leer_PLC():
@@ -742,7 +695,7 @@ def leer_PLC():
         4 Estado del variador: si se enciende o se apaga el movimiento de la banda, pulsando un botón físico
     
     """
-     
+    
     global procesar_imagen     
     global cont
     global plc
@@ -773,24 +726,28 @@ def leer_PLC():
         plc.sendall(frame) #Solicutd al PLC      
         data = plc.recv(1024) # Guardar datos devueltos por el PLC en el arreglo data
         #print("Recibido", repr(data))
+    if(data[10]==1):
+
+        ret, frame = capture.read()
+        #print(f"Foto {cont}")
+        if not ret:
+            messagebox.showerror("Mensaje de error", "No se pudo leer el frame de la cámara.")
+            return
         
-    if(data[10]==1): 
+        image = frame.copy()
+        #print(f"Captured image shape: {image.shape}")  # Debug statement            
+ 
         #si paso un eslavon la cámara ya tomo foto  y se procede a procesar la siguiente imagen
         procesar_imagen=True              
-        ejecucion_camera()
+        ejecucion_camera(image)
         escribir_PLC(data[12],clase_codificada,flag_break) 
         cont+=1 
         plc.close() 
 
-        #if (num_esqueje_analizado == Cantidad_imagenes):
-            #detener()
-            #messagebox.showinfo("Ejecución finalizada", "Las imágenes del directorio elegido fueron procesadas con éxito. Puede consultar la hoja de resultados en el mismo directorio donde se encuentran las imágenes.")
-            #file_results.close()
-            
         
     else:
         # coloco contador y clasificacion en cero para enviar al plc 
-        escribir_PLC(data[12],0,flag_break) 
+        escribir_PLC(data[12],5,flag_break) 
         plc.close() 
     
         #if (num_esqueje_analizado == Cantidad_imagenes):
@@ -801,7 +758,7 @@ def leer_PLC():
 """ ----------------------------------------------------------------------------------------------------------------------------------------
     ------------------------------------------------- 4. Definición de funciones asociadas a botones ------------------------------------------------
     ---------------------------------------------------------------------------------------------------------------------------------------- """
-  
+
 def agregar_esqueje():
     """
     Función que permite agregar una nueva variedad de esqueje desde un boton
@@ -838,7 +795,7 @@ def agregar_esqueje():
     corto_entry.pack(pady=5)
 
     hoja_base_label = tk.Label(input_window, text='Hoja en Base en cm:', bg="#4B4F65", fg='#AAAABA',
-                               font=("calibri", 12, "bold"))
+                            font=("calibri", 12, "bold"))
     hoja_base_label.pack(pady=5)
 
     hoja_base_entry = tk.Entry(input_window, bg="#343A40", fg='#AAAABA', font=("calibri", 12, "bold"))
@@ -866,7 +823,7 @@ def agregar_esqueje():
 
     ok_button = tk.Button(input_window, text='Agregar', command=save_and_close)
     ok_button.pack(pady=5)
- 
+
     cancel_button = tk.Button(input_window, text='Cancelar', command=input_window.destroy)
     cancel_button.pack(pady=5)
 
@@ -889,7 +846,7 @@ def get_params_by_name(name):
             return largo, corto, hoja_base
     # If the name is not found in the values list, return empty strings for the parameters
     return '', '', ''
- 
+
 
 def abrir_ventana_info():
     """
@@ -909,7 +866,7 @@ def abrir_ventana_info():
     # Configurar el título de la ventana
     nueva_ventana.title("ALSOFT - Acerca del Software")
 
-     # Agregar etiquetas con el texto
+    # Agregar etiquetas con el texto
     texto1 = "Este software utiliza técnicas de visión artificial y PLC para automatizar la selección de distintos tipos de esquejes. Se trata de una herramienta tecnológica diseñada para optimizar y agilizar los procesos de selección, garantizando una mayor eficiencia y precisión en los resultados."
     etiqueta_texto1 = tk.Label(nueva_ventana, text=texto1, wraplength=500,fg = '#AAAABA',font = ("calibri", 14, "bold"), justify="center")
     etiqueta_texto1.pack()
@@ -1010,7 +967,11 @@ def estadisticas():
 
 
 global cantidad_esquejes
+global capture
+capture=None
 cantidad_esquejes = 0
+global clase_codificada
+clase_codificada=5
 cont=0
 
 MainWindow = tk.Tk() # Se crea la ventana principal para la interfaz.
@@ -1027,7 +988,7 @@ screen_width = MainWindow.winfo_screenwidth() #Se obtiene el ancho de la ventana
 screen_height = MainWindow.winfo_screenheight()#Se obtiene el alto de la ventana
 screen_resolution = str(screen_width)+'x'+str(screen_height)#Se crea la dimensiones de la ventada
 MainWindow.geometry(screen_resolution)
-               
+            
 # Label para el tí­tulo de la imagen de entrada
 label_imag_ORIGINAL = tk.Label(text='Imagen original', font = ("Helvetica", 18, "bold"), fg = '#AAAABA', bg = "#314354") 
 label_imag_ORIGINAL.place(x=247,y=0)
