@@ -1,10 +1,8 @@
-
-
 # -*- coding: utf-8 -*-
 """ -------------------------------------------------------------------------------------------------------------------------------------
     ------------------------------------------------ Grupo de investigación GEPAR -------------------------------------------------------
     -------------------------------------------------- Universidad de Antioquia ---------------------------------------------------------
-    -------------- Autores: Luis Fernando Torres (Interfaz gráfica y documentación) -------
+    -------------- Autores: Luis Fernando Torres, Alexander Passo, Ricardo Moreno, David Fernandez (Interfaz gráfica y documentación) -------
     -------------------------------------------------------------------------------------------------------------------------------------
     --------------- Project Name: Clasificación de esquejes mediante técnicas de visión artificial --------------------------------------
     -------------------------------------------------------------------------------------------------------------------------------------
@@ -41,9 +39,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import simpledialog
-
 import time
 
+
+from modules.imageProcess import set_global_variables, segmentacion, rotateAndScale, encontrar_medidas, savitzky_golay
+
+# Set global variables
+corto_pixeles = 200  # Example value
+largo_pixeles = 300  # Example value
+hojabase_pixeles = 50  # Example value
+factor = 0.1  # Example value
+set_global_variables(corto_pixeles, largo_pixeles, hojabase_pixeles, factor)
+
+
+# PLC variables globales
 global velocidad_variador  # Definir la variable velocidad como global 
 
 """ ----------------------------------------------------------------------------------------------------------------------------------------
@@ -167,7 +176,7 @@ def iniciar():
             return 0
         
         conectar_PLC()
-        #ejecucion_camera()  
+        ejecucion_camera()  
     else:                                                           # Si no se detecta el modo de lectura aparece este error
         messagebox.showerror("Mensaje de error","No se ha detectado el modo de lectura, por favor elí­jalo.")                                            
         detener()
@@ -256,203 +265,6 @@ def ask_path_camera():
         Text_ruta.tag_add("center",1.0,"end")                          # Se agrega dicha justificación al Widget de texto 
         Text_ruta.config(state='disable')                              # Se inhabilita la edición del texto
         
-"""----------------------------------- f. Extracción de información del esqueje ----------------------------------------------------------------------------"""
-def encontrar_medidas(imagen):
-    """
-    Función para encontrar el area foliar y tallo promedio de un esqueje
-    """
-    gray = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
-
-    h, w = gray.shape
-    stem_area = gray[:, :w // 3]
-    leaf_area = gray[:, w // 3:]
-
-    # Count non-zero pixels in stem area to find average stem width
-    stem_nonzero_counts = np.count_nonzero(stem_area, axis=0)
-    average_stem_width = np.mean(stem_nonzero_counts)
-
-    # Split leaf area into upper and lower halves
-    upper_leaf_area = leaf_area[:h // 2, :]
-    lower_leaf_area = leaf_area[h // 2:, :]
-
-    # Count non-zero pixels in both halves to find leaf area
-    upper_nonzero_counts = np.count_nonzero(upper_leaf_area)
-    lower_nonzero_counts = np.count_nonzero(lower_leaf_area)
-
-    # Determine the larger leaf area
-    larger_leaf_area = max(upper_nonzero_counts, lower_nonzero_counts)
-
-    # Scale factor for area calculation
-    scale_factor = (10.5 / 960) ** 2
-
-    # Calculate scaled leaf area
-    leaf_area_scaled = larger_leaf_area * scale_factor
-
-    return average_stem_width * scale_factor, leaf_area_scaled
-
-def segmentacion(original_image):
-    """Esta función es una función que tiene como parámetro de entrada la imagen original, es el core de SOCAES, pues aquí es donde se realiza la extracción de toda la información acerca del esqueje 
-    que está siendo analizado. Allí se realiza un preprocesado de la imagen, operaciones de morfología y se utiliza un filtro en la detección de la hoja en base. Esta función retorna la imagen 
-    procesada e información asociada al esqueje como longitud en centímetros y clasificación.""" 
-    
-    """---------------------------- f.1. Definición e inicialización de variable ----------------------------------------------------------------------------"""
-    global clase                                                                                           # Variable que almacena la clase                                                                                    
-    
-    clasificacion='0'                                                                                      # Variable donde se almacena la clasificación del esqueje
-    clase='Nada'                                                                                           # Variable donde se almacena la clase del esqueje
-
-    """---------------------- f.2. Preprocesado y extracción de contornos de la imagen -----------------------------------------------------------------------"""
-    ret,imagen_binarizada = cv2.threshold(original_image[:,:,0],20,255,cv2.THRESH_BINARY_INV)              # Se pasa la imagen a escala de grises y se realiza una binarización invertida con un umbral de 50
-    contours, hierarchy = cv2.findContours(imagen_binarizada,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)     # Se encuetra los contornos de la imagen binarizada
-    contours = sorted(contours, key=cv2.contourArea,reverse=True)                                          # Se ordenan los contornos de mayor area a menor area  
-    
-    contorno_esqueje = contours[0]                                                                         # Se toma el primer contorno que corresponde al de mayor area (contorno del esqueje)    
-    imagen_binarizada[...] = 0                                                                             # Se lleva todos los valores de la imgaen a   
-    cv2.drawContours(imagen_binarizada, [contorno_esqueje], 0, 255, cv2.FILLED)                            # Se dibuja el contorno del esquejes en la imagens creada en la línea anterior, para que solo exista el contorno del esqueje
-    mascara = cv2.bitwise_and(original_image,original_image,mask = imagen_binarizada)                      # Se aplica la mascara del contorno de la imagen original con una operacion and 
-    centerContour,sizeContour,theta = cv2.fitEllipse(contorno_esqueje)                                     # Se encierra el esqueje en la elipse de menor area para obtener el ángulo que forma con la horizontal
-    esqueje_rotado=rotateAndScale(mascara,1,theta)                                                         # Se el llamdo a la función para rotar el contorno del esqueje en la imagen 
-    ret,imagen_binarizada_2 = cv2.threshold(esqueje_rotado[:,:,1],5,255,cv2.THRESH_BINARY)                 # Se realiza una binarización invertida con un umbral de 5
-    contours2, hierarchy2 = cv2.findContours(imagen_binarizada_2,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE) # Se encuetra los contornos de la imagen binarizada 2
-    contours2 = sorted(contours2, key=cv2.contourArea,reverse=True)                                        # Se ordenan los contornos de mayor area a menor area  
-    contorno_esqueje2 = contours2[0]                                                                       # Se toma el primer contorno que corresponde al de mayor area  
-    imagen_binarizada_2[...] = 0                                                                           # Se lleva todos los valores de la imgaen a 0
-    cv2.drawContours(imagen_binarizada_2, [contorno_esqueje2], 0, 255, cv2.FILLED)                         # Se dibuja el contorno del esquejes en la imagens creada en la línea anterior, para que solo exista el contorno del esqueje
-    
-    x,y,w,h = cv2.boundingRect(contorno_esqueje2)                                                          # Se encuentra el rectángulo de menor área que encierra el contorno del esqueje
-    dst_roi = esqueje_rotado[y:y+h,x:x+w]                                                                  # Se toma la sección de la imagen usando la máscara dada por las dimensiones del rectángulo encontrado en la linea anterior
-    
-    imagen_binarizada_3 = imagen_binarizada_2[y:y+h,x:x+w] 
-    cols,rows=dst_roi.shape[:2] 
-    #print("col: ", cols, "Rows",rows)
-                                                                        # Se obtienen las dimensiones de la imagen (Número de filas y columnas)
-    """----------------------------------- f.3. Validación para rotar la imagen 90° -----------------------------------------------------------------------"""
-    if rows<cols:                                                                                          # Si el número de filas es menor que de columnas se hace una rotación de 90° 
-        esqueje_rotado = rotateAndScale(dst_roi,0.5,90)
-        imagen_binarizada_3 = rotateAndScale(imagen_binarizada_3,0.5,90)            
-    
-    """------------------------------------------- f.4. Aplicación morfoligía -----------------------------------------------------------------------------"""
-    kernel = np.ones((5,11),np.uint8)                                                                      # Definición del elemento estructurante
-    imagen_binarizada_3 = cv2.morphologyEx(imagen_binarizada_3, cv2.MORPH_OPEN, kernel)                    # Se realiza una apertura 
-    cols,rows=dst_roi.shape[:2]                                                                            # Se obtienen las dimensiones de la imagen (Número de filas y columnas)
-        
-    longitud_cm = cols*factor                                                                              # Se convierte la longitud a centímetros multiplicando por el factor de conversión  
-    
-    """-------------------------- f.5. Asignación de la clasificación y clase del esqueje -------------------------------------------------------------------"""
-    if cols<corto_pixeles and cols>200:                                                                    # El esqueje es corto si el número de columnnas es menor a la longitud de un esqueje corto en pixeles 
-        clasificacion='1'
-        clase='Corto'
-    elif cols>largo_pixeles:                                                                               # El esqueje es largo si el número de columnnas es mayor a la longitud de un esqueje largo en pixeles
-        clasificacion='2'
-        clase='Largo'
-    elif cols<200 or rows<20:                                                                              # La imagen no tiene clasificacion si el número de columnnas es menor que 200 pixeles o el número de filas es menor que 20
-        clasificacion='0'
-        clase='Nada'
-    elif cols>corto_pixeles and cols<largo_pixeles:                                                        # El esqueje es ideal si el número de columnnas es mayor a la longitud de un esqueje corto en pixeles y menor a la longitud de un esqueje largo en pixeles
-        clasificacion='4'
-        clase='Ideal'
-    else:       
-        clasificacion='0'
-        clase='Vacio'
-    
-    """----------------------------------- f.6. Proceso para hallar hoja en base ----------------------------------------------------------------------------"""
-    if clase != 'Corto':
-        a=0  
-        b=0
-        d=0
-        
-        row,col=imagen_binarizada_3.shape
-        
-        # Realización de lntegral de proyeccion sobre la imagen binaria
-        for c in range(col):
-            a=np.append(a,(imagen_binarizada_3[:,c] > 100).sum())
-        
-        promedio=np.average(a[np.uint(a.size*0.01):np.uint(a.size*0.5)])
-        
-        if promedio<100:
-            b = a
-        else:
-            b = np.flipud(a)
-            
-        if promedio<100:pow
-        if np.uint(b.size)>200:
-            b=savitzky_golay(b,11,1)
-            b=savitzky_golay(b,11,1)
-            d=np.diff(b)
-            d=savitzky_golay(d,11,1)
-
-            # Se hace una selección usando la media
-            promedio=np.average(b[np.uint(hojabase_pixeles*0.4):np.uintp(hojabase_pixeles*0.5)])
-            valor_hojabase_pixeles=b[hojabase_pixeles]
-            
-            if np.abs(valor_hojabase_pixeles-promedio)> np.uintp(promedio*0.22):      
-                clasificacion='3'
-                clase='Hoja en base'
-
-
-    tallo_promedio,area_foliar = encontrar_medidas(esqueje_rotado)                                      # Se llama la función para encontrar area foliar y tallo promedio del esqueje
-
-    ret_esqueje_rotado = esqueje_rotado                                                                 # Imagen que se retorna
-    b,g,r = cv2.split(esqueje_rotado)                                                                   # Se obtienen las capas b,g,r
-    esqueje_rotado = cv2.merge([r,g,b])                                                                 # Se cambia la imagen a r,g,b
-
-    return tallo_promedio,area_foliar,ret_esqueje_rotado, longitud_cm, clasificacion, clase, dst_roi.copy(), contorno_esqueje2
-    
-"""------------------------------------------- g. Rotación de la imagen ----------------------------------------------------------------------------"""
-def rotateAndScale(img_binarizada, scaleFactor = 0.5, theta = 30):
-    """Esta Función tiene como parámetros de entreda la imagen binarizada, un factor de escala para cambiar el tamaño de la imagen y el ángulo que se desea
-    rotar la imagen. Esta función tiene como retorno la imagen rotada."""
-    
-    (old_filas,old_columnas) = img_binarizada.shape[:2]                                                                                       # Se obtiene el número de  filas y columnas de la imagen 
-    Matriz_rotada = cv2.getRotationMatrix2D(center=(old_columnas/2,old_filas/2), angle=theta, scale=scaleFactor)                              # Rota la imagen theta grados alrededor se su centro
-    
-    new_columnas,new_filas = old_columnas*scaleFactor,old_filas*scaleFactor                                                                   # Se escala la imagen
-    r = np.deg2rad(theta)                                                                                                                     # Se convierte el ángulo de grados a radianes
-    new_columnas,new_filas = (abs(np.sin(r)*new_filas) + abs(np.cos(r)*new_columnas),abs(np.sin(r)*new_columnas) + abs(np.cos(r)*new_filas))  # Encontrar las nuevas dimensiones de la imagen escalada
-    
-    (tx,ty) = ((new_columnas-old_columnas)/2,(new_filas-old_filas)/2)                                                                         # Encuetra un promedio entre la imagen original y la imagen escalada
-    Matriz_rotada[0,2] += tx 
-    Matriz_rotada[1,2] += ty
-    
-    rotated_and_scaled_img = cv2.warpAffine(img_binarizada, Matriz_rotada, dsize=(int(new_columnas),int(new_filas)))
-    # La función warpAffine, trabaja de la siguiente forma:
-    # 1. aplica a la matriz rotada una transformacion a cada uno de los pixeles de la imagen original
-    # 2. guarda todo lo que cae en la parte superior izquierda de la imagen resultante
-    
-    return rotated_and_scaled_img
-
-"""------------------------------------------- h. Filtro savitzky_golay ----------------------------------------------------------------------------"""
-def savitzky_golay(y, window_size, order, deriv=0, rate=1):
-    """ Smooth (and optionally differentiate) data with a Savitzky-Golay filter.The 
-        Savitzky-Golay filter removes high frequency noise from data. It has the
-        advantage of preserving the original shape and features of the signal better
-        than other types of filtering approaches, such as moving averages techniques."""
-
-    try:
-        window_size = abs(int(window_size))
-        order = abs(int(order))
-    
-    except ValueError:
-        raise ValueError("window_size and order have to be of type int")
-    
-    if window_size % 2 != 1 or window_size < 1:
-        raise TypeError("window_size size must be a positive odd number")
-    if window_size < order + 2:
-        raise TypeError("window_size is too small for the polynomials order")
-    
-    order_range = range(order+1)
-    half_window = (window_size -1) // 2
-    # precompute coefficients
-    b = np.mat([[k**i for i in order_range] for k in range(-half_window, half_window+1)])
-    m = np.linalg.pinv(b).A[deriv] * rate**deriv * factorial(deriv)
-    # pad the signal at the extremes with
-    # values taken from the signal itself
-    firstvals = y[0] - np.abs( y[1:half_window+1][::-1] - y[0] )
-    lastvals = y[-1] + np.abs(y[-half_window-1:-1][::-1] - y[-1])
-    y = np.concatenate((firstvals, y, lastvals))
-    return np.convolve( m[::-1], y, mode='valid')
-
-
 """------------------------------------ i. Modo de lectura desde un directorio -----------------------------------------------------------------------------"""
 def ejecucion_directorio():
     """Esta función no tiene parámetros de entrada y es la encargada de administrar el procesamiento de los esquejes al haber seleccionado el modo de 
@@ -564,9 +376,6 @@ def ejecucion_camera(image):
 
             classification = '0'  # Se inaliza la clasificación en '0'
             longitud_cm=0
-            #print(f"Error: {e}")        
-            #tallo_promedio, area_foliar, esqueje_rotado, longitud_cm, classification, clase, imagenSegmentada, contorno_esqueje = segmentacion(image[100:1000, 100:1200]) 
-            #time.sleep(0.01)
             cantidad_esquejes += 0  # Se aumenta en uno el contador de las imágenes procesadas 
             num_esqueje_analizado = cantidad_esquejes
             actualizar_interfaz(image, image*0)  # Se invoca la función para actualizar la interfaz
@@ -880,10 +689,10 @@ def abrir_ventana_info():
     etiqueta_texto3.pack()
     
     # Cargar las imágenes
-    imagen1 = Image.open("gepar.png")
-    imagen2 = Image.open("udea.png")
-    imagen3 = Image.open("asocol.png")
-    imagen4 = Image.open("GDM.jpeg")
+    imagen1 = Image.open("Assets/Images/gepar.png")
+    imagen2 = Image.open("Assets/Images/udea.png")
+    imagen3 = Image.open("Assets/Images/asocol.png")
+    imagen4 = Image.open("Assets/Images/GDM.jpeg")
 
     #Crear un objeto Canvas en la ventana
     canvas = tk.Canvas(nueva_ventana, width=800, height=600)
@@ -1097,17 +906,17 @@ boton_cargar.place(x=1150,y=608)
 
 
 #Imagen GEPAR
-gepar = ImageTk.PhotoImage(file="gepar.png")
+gepar = ImageTk.PhotoImage(file="Assets/Images/gepar.png")
 label_gepar = tk.Label(image=gepar)
 label_gepar.place(x = 38,y = 700)
 
 #Imagen UDEA
-udea = ImageTk.PhotoImage(file="udea.png")
+udea = ImageTk.PhotoImage(file="Assets/Images/udea.png")
 label_udea = tk.Label(image=udea)
 label_udea.place(x = 138,y = 700)
 
 #Imagen UDEA
-GDM = ImageTk.PhotoImage(file="GDM_logo.jpg")
+GDM = ImageTk.PhotoImage(file="Assets/Images/GDM_logo.jpg")
 label_gdm = tk.Label(image=GDM)
 label_gdm.place(x = 228,y = 700)
 

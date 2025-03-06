@@ -923,10 +923,10 @@ def abrir_ventana_info():
     etiqueta_texto3.pack()
     
     # Cargar las imágenes
-    imagen1 = Image.open("gepar.png")
-    imagen2 = Image.open("udea.png")
-    imagen3 = Image.open("asocol.png")
-    imagen4 = Image.open("GDM.jpeg")
+    imagen1 = Image.open("Assets/Images/gepar.png")
+    imagen2 = Image.open("Assets/Images/udea.png")
+    imagen3 = Image.open("Assets/Images/asocol.png")
+    imagen4 = Image.open("Assets/Images/GDM.jpeg")
 
     #Crear un objeto Canvas en la ventana
     canvas = tk.Canvas(nueva_ventana, width=800, height=600)
@@ -1136,17 +1136,17 @@ boton_cargar.place(x=1150,y=608)
 
 
 #Imagen GEPAR
-gepar = ImageTk.PhotoImage(file="gepar.png")
+gepar = ImageTk.PhotoImage(file="Assets/Images/gepar.png")
 label_gepar = tk.Label(image=gepar)
 label_gepar.place(x = 38,y = 700)
 
 #Imagen UDEA
-udea = ImageTk.PhotoImage(file="udea.png")
+udea = ImageTk.PhotoImage(file="Assets/Images/udea.png")
 label_udea = tk.Label(image=udea)
 label_udea.place(x = 138,y = 700)
 
 #Imagen UDEA
-GDM = ImageTk.PhotoImage(file="GDM_logo.jpg")
+GDM = ImageTk.PhotoImage(file="Assets/Images/GDM_logo.jpg")
 label_gdm = tk.Label(image=GDM)
 label_gdm.place(x = 228,y = 700)
 
