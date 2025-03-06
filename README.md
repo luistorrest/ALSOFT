@@ -6,32 +6,64 @@ Inicialmente, se requiere clonar el repositorio con el propósito de obtener tod
 
 `git clone https://github.com/luistorrest/ALSOFT.git`
 
-Con el objetivo de proceder a la instalación integral de las bibliotecas indispensables y así permitir la ejecución sin contratiempos del programa en cuestión, resulta imperativo generar un entorno virtual de Python. A tal efecto, se sugiere atender las etapas que se detallan a continuación en la terminal:
+# ALSOFT: SOFTWARE PARA ALIES ALIMENTADORA DE SELECCIONADORA DE ESQUEJES
 
-- Dirigirse al directorio de elección para la creación del entorno virtual.
+ALSOFT es un sistema de clasificación automatizada de esquejes basado en técnicas de visión artificial. Este software está diseñado para procesar imágenes de esquejes, extraer características clave, y clasificarlos. El sistema está integrado con un PLC para controlar el proceso de clasificación en tiempo real.
 
-- Ejecutar el comando:
+## Requisitos del Sistema
 
-`python -m venv plc_img`.
+- **Python 3.8 o superior**
+- **Librerías Requeridas**:
+  - `opencv-python` (para procesamiento de imágenes)
+  - `numpy` (para operaciones matemáticas)
+  - `tkinter` (para la interfaz gráfica)
+  - `matplotlib` (para visualización de datos)
+  - `pandas` (para manejo de datos en CSV)
+  - `Pillow` (para manejo de imágenes en la interfaz gráfica)
+# Instalación
 
-- Acceder a la carpeta correspondiente mediante la ruta:
+1. Clona este repositorio:
+```
+git clone https://github.com/tu_usuario/ALSOFT.git
+cd ALSOFT
+```
+2. Crear un entorno virtual (Recomendado):
+```
+python -m venv venv
+source venv/bin/activate  # En Linux/Mac
+venv\Scripts\activate     # En Windows
+```
+3. Instalar dependencias
+```
+pip install -r requirements.txt
+```
+4. Ejecutar programa
+ ```
+python ALSOFT.py
+ ```   
 
- `plc_img\Scripts`.
+# Estructura:
+```  
+ALSOFT/
+│
+├── main.py                # Script principal del programa
+├── modules/               # Módulos adicionales
+│   └── imageProcess.py    # Funciones de procesamiento de imágenes
+├── Assets/                # Recursos como imágenes y logos
+│   └── Images/
+│       ├── gepar.png
+│       ├── udea.png
+│       └── GDM_logo.jpg
+├── TipoEsquejes.json      # Archivo JSON con parámetros de esquejes
+├── requirements.txt       # Lista de dependencias
+└── README.md              # Este archivo
+```  
 
-- Activar el entorno virtual por medio del comando
+## Registro de Software
+Este Software está registrado en la Dirección Nacional de Derecho de Autor / Ministerio de Interior de Colombia con el número de registro 13-101-238 el 06 de diciembre del 2024
+# Authores
 
-`activate`.
+- [@luistorrset](https://www.linkedin.com/in/luisftorrest/)
+- [@David Fernandez ]()
 
-
-Una vez el entorno virtual de Python esté activado, se procede a la instalación de las bibliotecas y dependencias indispensables para la ejecución del programa, mediante el empleo del siguiente comando:
-
-`pip install -r requirements.txt`
-
-Prosiguiendo con el proceso, se ejecuta el archivo de Python denominado "pruebaPLC_IMG_SOCAES_.py" a través del siguiente comando:
-
-
-`python .\pruebaPLC_IMG_SOCAES_.py
-`
-
-Es de suma importancia destacar que para garantizar el correcto funcionamiento del programa, es imperativo mantener una conexión activa entre el PLC y el equipo informático. Esto se debe a que la ejecución de las acciones planificadas se fundamenta en el establecimiento de una conexión efectiva entre ambos dispositivos. Por lo tanto, se recomienda asegurarse de que el PLC esté debidamente conectado al computador antes de proceder con la ejecución del programa.
 
